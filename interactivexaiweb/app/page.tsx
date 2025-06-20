@@ -65,7 +65,7 @@ export default function HomePage() {
       funnyAnimation: "animate-brain-think",
       hoverEffect: "hover:animate-wiggle-crazy",
       demoType: "explanations",
-      description: "See how our AI brain processes your data and generates clear explanations!",
+      description: "See how SHAP and LIME work together to explain AI decisions!",
     },
     {
       icon: Zap,
@@ -80,7 +80,7 @@ export default function HomePage() {
       funnyAnimation: "animate-electric-dance",
       hoverEffect: "hover:animate-shake-crazy",
       demoType: "charts",
-      description: "Experience the power of interactive data visualization with animated charts!",
+      description: "Experience dynamic charts and visualizations in action!",
     },
     {
       icon: Users,
@@ -95,7 +95,7 @@ export default function HomePage() {
       funnyAnimation: "animate-group-cheer",
       hoverEffect: "hover:animate-party-time",
       demoType: "user-friendly",
-      description: "See how users from all backgrounds love our intuitive interface!",
+      description: "See how our interface works for users of all skill levels!",
     },
     {
       icon: Shield,
@@ -110,7 +110,7 @@ export default function HomePage() {
       funnyAnimation: "animate-shield-protect",
       hoverEffect: "hover:animate-fortress-mode",
       demoType: "reliability",
-      description: "Watch how we ensure your AI explanations are reliable and trustworthy!",
+      description: "Watch how we ensure trustworthy AI explanations!",
     },
     {
       icon: Brain,
@@ -125,7 +125,7 @@ export default function HomePage() {
       funnyAnimation: "animate-robot-dance",
       hoverEffect: "hover:animate-transform",
       demoType: "compare",
-      description: "See different AI models compete and find the best one for your data!",
+      description: "See AI models battle it out in our comparison demo!",
     },
   ]
 
@@ -135,8 +135,14 @@ export default function HomePage() {
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -inset-10 opacity-60">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-gradient-to-r from-orange-300/30 to-pink-300/30 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute top-3/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-300/30 to-blue-300/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-gradient-to-r from-green-300/30 to-teal-300/30 rounded-full blur-3xl animate-pulse delay-2000"></div>
+          <div
+            className="absolute top-3/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-300/30 to-blue-300/30 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "1s" }}
+          ></div>
+          <div
+            className="absolute top-1/2 left-1/2 w-96 h-96 bg-gradient-to-r from-green-300/30 to-teal-300/30 rounded-full blur-3xl animate-pulse"
+            style={{ animationDelay: "2s" }}
+          ></div>
         </div>
         <SparkleBackground />
         {/* Mouse Follower */}
@@ -171,13 +177,19 @@ export default function HomePage() {
           <nav className="hidden md:flex items-center space-x-8">
             <Link
               href="#features"
-              className="text-gray-700 hover:text-orange-500 transition-all duration-300 hover:glow-text font-medium"
+              className="text-gray-700 hover:text-orange-500 transition-all duration-300 hover:animate-text-glow font-medium"
             >
               Features
             </Link>
             <Link
+              href="/xai-concepts"
+              className="text-gray-700 hover:text-purple-500 transition-all duration-300 hover:animate-text-glow font-medium"
+            >
+              XAI Concepts
+            </Link>
+            <Link
               href="/upload"
-              className="text-gray-700 hover:text-pink-500 transition-all duration-300 hover:glow-text font-medium"
+              className="text-gray-700 hover:text-pink-500 transition-all duration-300 hover:animate-text-glow font-medium"
             >
               Get Started
             </Link>
@@ -185,11 +197,11 @@ export default function HomePage() {
           <Button
             asChild
             variant="default"
-            className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-400 hover:to-pink-400 text-white border-0 shadow-lg hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105 font-medium"
+            className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-400 hover:to-pink-400 text-white border-0 shadow-lg font-medium px-6 py-3 rounded-xl hover:animate-button-glow transition-all duration-300 hover:scale-105"
           >
             <Link href="/upload" className="flex items-center">
               Launch Platform
-              <Sparkles className="ml-2 h-4 w-4 animate-wiggle" />
+              <Sparkles className="ml-2 h-4 w-4 animate-spin-slow" />
             </Link>
           </Button>
         </div>
@@ -235,26 +247,26 @@ export default function HomePage() {
               size="lg"
               asChild
               variant="default"
-              className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-400 hover:to-pink-400 text-white border-0 shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:scale-105 group px-8 py-4 text-lg font-medium"
+              className="bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-400 hover:to-blue-400 text-white border-0 shadow-xl group px-8 py-4 text-lg font-medium rounded-xl hover:animate-button-glow transition-all duration-300 hover:scale-105"
             >
               <Link href="/upload" className="flex items-center">
                 <Heart className="mr-3 h-5 w-5 text-white animate-bounce-gentle" />
                 Start Exploring
-                <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+                <ArrowRight className="ml-3 h-5 w-5 group-hover:translate-x-2 transition-transform duration-300" />
               </Link>
             </Button>
             <Button
               size="lg"
               variant="outline"
               asChild
-              className="border-2 border-purple-300 text-purple-600 hover:bg-purple-50 hover:border-purple-400 transition-all duration-300 hover:scale-105 group px-8 py-4 text-lg font-medium"
+              className="border-2 border-purple-300 text-purple-600 hover:bg-purple-50 hover:border-purple-400 group px-8 py-4 text-lg font-medium rounded-xl hover:animate-pulse-neon transition-all duration-300 hover:scale-105"
             >
               <Link
                 href="https://github.com/surendrasinghsodha/interactive-xai-platform"
                 target="_blank"
                 className="flex items-center"
               >
-                <Github className="mr-3 h-5 w-5 group-hover:rotate-12 transition-transform duration-300" />
+                <Github className="mr-3 h-5 w-5 animate-spin-slow" />
                 View Source Code
               </Link>
             </Button>
@@ -363,7 +375,7 @@ export default function HomePage() {
                     <Button
                       size="sm"
                       variant="default"
-                      className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white border-0 backdrop-blur-sm animate-button-glow"
+                      className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white border-0 backdrop-blur-sm hover:animate-button-glow"
                     >
                       <Rocket className="mr-2 h-3 w-3 animate-spin-slow" />
                       Play Demo
@@ -442,10 +454,10 @@ export default function HomePage() {
             size="lg"
             asChild
             variant="default"
-            className="bg-gradient-to-r from-orange-500 to-purple-500 hover:from-orange-400 hover:to-purple-400 text-white border-0 shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:scale-110 group px-10 py-5 text-xl font-medium"
+            className="bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-400 hover:to-orange-400 text-white border-0 shadow-xl group px-10 py-5 text-xl font-medium rounded-xl hover:animate-button-glow transition-all duration-300 hover:scale-105"
           >
             <Link href="/upload" className="flex items-center">
-              <Sparkles className="mr-3 h-6 w-6 animate-wiggle" />
+              <Sparkles className="mr-3 h-6 w-6 animate-spin-slow" />
               Start Your Journey
               <ArrowRight className="ml-3 h-6 w-6 group-hover:translate-x-2 transition-transform duration-300" />
             </Link>
@@ -488,7 +500,7 @@ export default function HomePage() {
                 <li>
                   <Link
                     href="https://github.com/surendrasinghsodha/interactive-xai-platform"
-                    className="text-gray-600 hover:text-orange-500 transition-colors duration-300 hover:glow-text flex items-center text-lg"
+                    className="text-gray-600 hover:text-orange-500 transition-colors duration-300 hover:animate-text-glow flex items-center text-lg"
                   >
                     <Github className="mr-2 h-4 w-4" />
                     GitHub Repository
@@ -497,7 +509,7 @@ export default function HomePage() {
                 <li>
                   <Link
                     href="/upload"
-                    className="text-gray-600 hover:text-pink-500 transition-colors duration-300 hover:glow-text flex items-center text-lg"
+                    className="text-gray-600 hover:text-pink-500 transition-colors duration-300 hover:animate-text-glow flex items-center text-lg"
                   >
                     <ArrowRight className="mr-2 h-4 w-4" />
                     Get Started
