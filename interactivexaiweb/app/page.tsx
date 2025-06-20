@@ -486,7 +486,7 @@ export default function HomePage() {
               <ul className="space-y-3 text-gray-600">
                 <li className="flex items-center">
                   <Star className="mr-2 h-4 w-4 text-yellow-500" />
-                  COMP47250: Team Software Project
+                  Built By ClusterMind
                 </li>
                 <li className="flex items-center">
                   <Heart className="mr-2 h-4 w-4 text-pink-500" />
@@ -520,7 +520,7 @@ export default function HomePage() {
           </div>
           <div className="border-t border-orange-200 mt-12 pt-8 text-center text-gray-500">
             <p className="text-lg">
-              &copy; 2024 InterWeb-XAI. Built with{" "}
+              &copy; 2025 InterWeb-XAI. Built with{" "}
               <Heart className="inline h-4 w-4 text-red-500 animate-bounce-gentle" /> for education.
             </p>
           </div>
