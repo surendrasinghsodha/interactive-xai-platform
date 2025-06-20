@@ -4,12 +4,28 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Brain, Upload, BarChart3, Users, Shield, Zap, Github, ArrowRight, Sparkles, Heart, Star } from "lucide-react"
+import {
+  Brain,
+  Upload,
+  BarChart3,
+  Users,
+  Shield,
+  Zap,
+  Github,
+  ArrowRight,
+  Sparkles,
+  Heart,
+  Star,
+  Rocket,
+} from "lucide-react"
 import Link from "next/link"
+import { FeatureDemoModal } from "@/components/feature-demo-modal"
+import { SparkleBackground } from "@/components/sparkle-background"
 
 export default function HomePage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [isLoaded, setIsLoaded] = useState(false)
+  const [demoModal, setDemoModal] = useState({ isOpen: false, feature: null as any })
 
   useEffect(() => {
     setIsLoaded(true)
@@ -20,6 +36,99 @@ export default function HomePage() {
     return () => window.removeEventListener("mousemove", handleMouseMove)
   }, [])
 
+  const features = [
+    {
+      icon: Upload,
+      title: "Easy Upload",
+      desc: "Effortlessly upload datasets (CSV, JSON, Excel) and pre-trained models (.pkl, .h5, ONNX) via a secure drag-and-drop interface or direct file selection. No complex configurations needed.",
+      color: "orange",
+      bgColor: "from-orange-100 to-orange-50",
+      iconColor: "text-orange-500",
+      delay: "0",
+      character: "🚀",
+      comicText: "WHOOSH!",
+      funnyAnimation: "animate-rocket-launch",
+      hoverEffect: "hover:animate-bounce-crazy",
+      demoType: "upload",
+      description: "Watch how easy it is to upload your data files with our drag-and-drop interface!",
+    },
+    {
+      icon: BarChart3,
+      title: "Smart Explanations",
+      desc: "Uncover model predictions with industry-standard SHAP (SHapley Additive exPlanations) and LIME (Local Interpretable Model-agnostic Explanations) for both global and local feature importance.",
+      color: "pink",
+      bgColor: "from-pink-100 to-pink-50",
+      iconColor: "text-pink-500",
+      delay: "200",
+      character: "🧠",
+      comicText: "EUREKA!",
+      funnyAnimation: "animate-brain-think",
+      hoverEffect: "hover:animate-wiggle-crazy",
+      demoType: "explanations",
+      description: "See how our AI brain processes your data and generates clear explanations!",
+    },
+    {
+      icon: Zap,
+      title: "Interactive Charts",
+      desc: "Visualize feature impacts and model behavior through dynamic, Plotly.js-powered charts like force plots, bar charts, and summary plots, enabling intuitive data exploration.",
+      color: "purple",
+      bgColor: "from-purple-100 to-purple-50",
+      iconColor: "text-purple-500",
+      delay: "400",
+      character: "⚡",
+      comicText: "ZAP!",
+      funnyAnimation: "animate-electric-dance",
+      hoverEffect: "hover:animate-shake-crazy",
+      demoType: "charts",
+      description: "Experience the power of interactive data visualization with animated charts!",
+    },
+    {
+      icon: Users,
+      title: "User Friendly",
+      desc: "Navigate a streamlined, step-by-step workflow designed for users of all technical backgrounds, from data scientists to business analysts, ensuring a seamless XAI experience.",
+      color: "blue",
+      bgColor: "from-blue-100 to-blue-50",
+      iconColor: "text-blue-500",
+      delay: "600",
+      character: "👥",
+      comicText: "AMAZING!",
+      funnyAnimation: "animate-group-cheer",
+      hoverEffect: "hover:animate-party-time",
+      demoType: "user-friendly",
+      description: "See how users from all backgrounds love our intuitive interface!",
+    },
+    {
+      icon: Shield,
+      title: "Reliable Results",
+      desc: "Assess the trustworthiness of explanations with built-in reliability metrics, including perturbation-based stability analysis and consistency checks between XAI methods.",
+      color: "green",
+      bgColor: "from-green-100 to-green-50",
+      iconColor: "text-green-500",
+      delay: "800",
+      character: "🛡️",
+      comicText: "SECURE!",
+      funnyAnimation: "animate-shield-protect",
+      hoverEffect: "hover:animate-fortress-mode",
+      demoType: "reliability",
+      description: "Watch how we ensure your AI explanations are reliable and trustworthy!",
+    },
+    {
+      icon: Brain,
+      title: "Compare Models",
+      desc: "Evaluate multiple AI models simultaneously by comparing their explanations for the same data points, facilitating informed model selection and understanding of differing behaviors.",
+      color: "indigo",
+      bgColor: "from-indigo-100 to-indigo-50",
+      iconColor: "text-indigo-500",
+      delay: "1000",
+      character: "🤖",
+      comicText: "BEEP!",
+      funnyAnimation: "animate-robot-dance",
+      hoverEffect: "hover:animate-transform",
+      demoType: "compare",
+      description: "See different AI models compete and find the best one for your data!",
+    },
+  ]
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-pink-50 to-purple-50 relative overflow-hidden">
       {/* Animated Background */}
@@ -29,26 +138,7 @@ export default function HomePage() {
           <div className="absolute top-3/4 right-1/4 w-96 h-96 bg-gradient-to-r from-purple-300/30 to-blue-300/30 rounded-full blur-3xl animate-pulse delay-1000"></div>
           <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-gradient-to-r from-green-300/30 to-teal-300/30 rounded-full blur-3xl animate-pulse delay-2000"></div>
         </div>
-
-        {/* Floating Sparkles */}
-        <div className="absolute inset-0">
-          {[...Array(25)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-3 h-3 rounded-full animate-sparkle"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${4 + Math.random() * 4}s`,
-                background: `linear-gradient(45deg, ${
-                  ["#f97316", "#ec4899", "#8b5cf6", "#06b6d4", "#10b981"][Math.floor(Math.random() * 5)]
-                }, ${["#fbbf24", "#f472b6", "#a78bfa", "#22d3ee", "#34d399"][Math.floor(Math.random() * 5)]})`,
-              }}
-            />
-          ))}
-        </div>
-
+        <SparkleBackground />
         {/* Mouse Follower */}
         <div
           className="absolute w-96 h-96 bg-gradient-radial from-orange-200/20 to-transparent rounded-full pointer-events-none transition-all duration-500 ease-out"
@@ -94,6 +184,7 @@ export default function HomePage() {
           </nav>
           <Button
             asChild
+            variant="default"
             className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-400 hover:to-pink-400 text-white border-0 shadow-lg hover:shadow-orange-500/25 transition-all duration-300 hover:scale-105 font-medium"
           >
             <Link href="/upload" className="flex items-center">
@@ -143,6 +234,7 @@ export default function HomePage() {
             <Button
               size="lg"
               asChild
+              variant="default"
               className="bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-400 hover:to-pink-400 text-white border-0 shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:scale-105 group px-8 py-4 text-lg font-medium"
             >
               <Link href="/upload" className="flex items-center">
@@ -171,96 +263,170 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-4 bg-white/50 backdrop-blur-sm">
-        <div className="container mx-auto">
+      <section id="features" className="py-24 px-4 bg-white/50 backdrop-blur-sm relative overflow-hidden">
+        {/* Comic Background Elements */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Comic Burst Effects */}
+          <div className="absolute top-20 left-10 w-32 h-32 opacity-20">
+            <div className="comic-burst animate-spin-slow text-yellow-400">
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <path d="M50,10 L60,40 L90,40 L70,60 L80,90 L50,70 L20,90 L30,60 L10,40 L40,40 Z" fill="currentColor" />
+              </svg>
+            </div>
+          </div>
+          <div className="absolute top-40 right-20 w-24 h-24 opacity-15">
+            <div className="comic-pow animate-bounce text-pink-400">
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <polygon points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35" fill="currentColor" />
+              </svg>
+            </div>
+          </div>
+          <div className="absolute bottom-32 left-1/4 w-28 h-28 opacity-10">
+            <div className="comic-zap animate-pulse text-purple-400">
+              <svg viewBox="0 0 100 100" className="w-full h-full">
+                <path d="M20,20 L80,20 L60,50 L90,50 L30,80 L50,50 L20,50 Z" fill="currentColor" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <div className="container mx-auto relative z-10">
           <div className="text-center mb-20">
-            <h2 className="text-5xl font-bold bg-gradient-to-r from-orange-500 to-purple-500 bg-clip-text text-transparent mb-6">
-              Powerful Features
-            </h2>
+            <div className="relative inline-block">
+              <h2 className="text-5xl font-bold bg-gradient-to-r from-orange-500 to-purple-500 bg-clip-text text-transparent mb-6 relative z-10">
+                Powerful Features
+              </h2>
+              {/* Comic Speech Bubble */}
+              <div className="absolute -top-8 -right-16 w-20 h-12 opacity-30">
+                <div className="comic-bubble animate-bounce-gentle text-yellow-400">
+                  <svg viewBox="0 0 100 60" className="w-full h-full">
+                    <ellipse cx="50" cy="25" rx="45" ry="20" fill="currentColor" />
+                    <path d="M30,40 L25,55 L40,45 Z" fill="currentColor" />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-orange-600">
+                    WOW!
+                  </div>
+                </div>
+              </div>
+            </div>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Everything you need to understand and trust AI decisions, designed for both beginners and experts
             </p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Upload,
-                title: "Easy Upload",
-                desc: "Simply drag and drop your data files. No technical setup required!",
-                color: "orange",
-                bgColor: "from-orange-100 to-orange-50",
-                iconColor: "text-orange-500",
-                delay: "0",
-              },
-              {
-                icon: BarChart3,
-                title: "Smart Explanations",
-                desc: "Get clear, visual explanations using advanced SHAP and LIME algorithms",
-                color: "pink",
-                bgColor: "from-pink-100 to-pink-50",
-                iconColor: "text-pink-500",
-                delay: "200",
-              },
-              {
-                icon: Zap,
-                title: "Interactive Charts",
-                desc: "Explore your data with beautiful, interactive visualizations that anyone can understand",
-                color: "purple",
-                bgColor: "from-purple-100 to-purple-50",
-                iconColor: "text-purple-500",
-                delay: "400",
-              },
-              {
-                icon: Users,
-                title: "User Friendly",
-                desc: "Built for everyone - from AI researchers to curious students and business professionals",
-                color: "blue",
-                bgColor: "from-blue-100 to-blue-50",
-                iconColor: "text-blue-500",
-                delay: "600",
-              },
-              {
-                icon: Shield,
-                title: "Reliable Results",
-                desc: "Trust your insights with our reliability scoring and stability analysis",
-                color: "green",
-                bgColor: "from-green-100 to-green-50",
-                iconColor: "text-green-500",
-                delay: "800",
-              },
-              {
-                icon: Brain,
-                title: "Compare Models",
-                desc: "Side-by-side comparisons help you choose the best AI model for your needs",
-                color: "indigo",
-                bgColor: "from-indigo-100 to-indigo-50",
-                iconColor: "text-indigo-500",
-                delay: "1000",
-              },
-            ].map((feature, index) => (
+            {features.map((feature, index) => (
               <Card
                 key={index}
-                className={`border-2 border-${feature.color}-200 bg-gradient-to-br ${feature.bgColor} hover:border-${feature.color}-300 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-${feature.color}-500/20 group animate-fade-in-up cursor-pointer`}
+                className={`border-2 border-${feature.color}-200 bg-gradient-to-br ${feature.bgColor} hover:border-${feature.color}-300 transition-all duration-500 hover:scale-105 hover:shadow-xl hover:shadow-${feature.color}-500/20 group animate-fade-in-up cursor-pointer relative overflow-hidden ${feature.hoverEffect}`}
                 style={{ animationDelay: `${feature.delay}ms` }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setDemoModal({
+                    isOpen: true,
+                    feature: feature,
+                  })
+                }}
               >
-                <CardHeader className="text-center p-8">
+                {/* Futuristic Glow Effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
+
+                {/* Comic Character */}
+                <div className="absolute -top-4 -right-4 text-4xl z-20 opacity-0 group-hover:opacity-100 transition-all duration-500 transform group-hover:scale-125 group-hover:rotate-12">
+                  <div className={`${feature.funnyAnimation}`}>{feature.character}</div>
+                </div>
+
+                {/* Comic Text Bubble */}
+                <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-all duration-500 delay-200 z-20">
+                  <div className="relative">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-full px-3 py-1 border-2 border-yellow-400 shadow-lg animate-bounce-gentle">
+                      <span className="text-xs font-bold text-gray-800">{feature.comicText}</span>
+                    </div>
+                    <div className="absolute -bottom-1 left-3 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-yellow-400"></div>
+                  </div>
+                </div>
+
+                {/* Holographic Border Effect */}
+                <div className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-500">
+                  <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-cyan-400/20 via-purple-400/20 to-pink-400/20 animate-gradient-x"></div>
+                </div>
+
+                {/* Demo Video Overlay */}
+                <div className="absolute inset-0 bg-black/80 opacity-0 group-hover:opacity-100 transition-all duration-500 z-10 flex items-center justify-center">
+                  <div className="text-center space-y-4 transform scale-75 group-hover:scale-100 transition-transform duration-500">
+                    <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center mx-auto backdrop-blur-sm animate-pulse-neon">
+                      <svg className="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </div>
+                    <p className="text-white font-medium text-sm px-4 animate-text-glow">Watch Demo</p>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-400 hover:to-purple-400 text-white border-0 backdrop-blur-sm animate-button-glow"
+                    >
+                      <Rocket className="mr-2 h-3 w-3 animate-spin-slow" />
+                      Play Demo
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Particle Effects */}
+                <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  {[...Array(8)].map((_, i) => (
+                    <div
+                      key={i}
+                      className="absolute w-1 h-1 bg-white rounded-full animate-particle-float"
+                      style={{
+                        left: `${Math.random() * 100}%`,
+                        top: `${Math.random() * 100}%`,
+                        animationDelay: `${Math.random() * 2}s`,
+                        animationDuration: `${2 + Math.random() * 2}s`,
+                      }}
+                    />
+                  ))}
+                </div>
+
+                <CardHeader className="text-center p-8 relative z-0">
                   <div
-                    className={`mx-auto mb-6 p-4 rounded-full bg-white shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110`}
+                    className={`mx-auto mb-6 p-4 rounded-full bg-white shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-110 relative overflow-hidden`}
                   >
+                    {/* Icon Glow Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
                     <feature.icon
-                      className={`h-8 w-8 ${feature.iconColor} transition-all duration-300 group-hover:animate-bounce-gentle`}
+                      className={`h-8 w-8 ${feature.iconColor} transition-all duration-300 group-hover:animate-bounce-gentle relative z-10`}
                     />
                   </div>
-                  <CardTitle className="text-xl text-gray-800 group-hover:text-gray-900 transition-colors duration-300 mb-3">
+                  <CardTitle className="text-xl text-gray-800 group-hover:text-gray-900 transition-colors duration-300 mb-3 relative">
                     {feature.title}
+                    {/* Futuristic Underline */}
+                    <div className="absolute bottom-0 left-1/2 w-0 h-0.5 bg-gradient-to-r from-cyan-400 to-purple-400 group-hover:w-full group-hover:left-0 transition-all duration-500"></div>
                   </CardTitle>
                   <CardDescription className="text-gray-600 group-hover:text-gray-700 transition-colors duration-300 text-base leading-relaxed">
                     {feature.desc}
                   </CardDescription>
                 </CardHeader>
+
+                {/* Corner Decorations */}
+                <div className="absolute top-0 left-0 w-8 h-8 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                  <div className="w-full h-full border-l-2 border-t-2 border-cyan-400 animate-corner-glow"></div>
+                </div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 opacity-0 group-hover:opacity-100 transition-all duration-500">
+                  <div className="w-full h-full border-r-2 border-b-2 border-purple-400 animate-corner-glow"></div>
+                </div>
               </Card>
             ))}
+          </div>
+
+          {/* Floating Comic Elements */}
+          <div className="absolute top-1/2 left-8 opacity-20 animate-float-slow">
+            <div className="text-6xl">💫</div>
+          </div>
+          <div className="absolute top-1/3 right-12 opacity-15 animate-float-reverse">
+            <div className="text-5xl">🎯</div>
+          </div>
+          <div className="absolute bottom-1/4 left-1/3 opacity-10 animate-spin-very-slow">
+            <div className="text-7xl">⚡</div>
           </div>
         </div>
       </section>
@@ -275,6 +441,7 @@ export default function HomePage() {
           <Button
             size="lg"
             asChild
+            variant="default"
             className="bg-gradient-to-r from-orange-500 to-purple-500 hover:from-orange-400 hover:to-purple-400 text-white border-0 shadow-xl hover:shadow-orange-500/30 transition-all duration-300 hover:scale-110 group px-10 py-5 text-xl font-medium"
           >
             <Link href="/upload" className="flex items-center">
@@ -347,6 +514,13 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Feature Demo Modal */}
+      <FeatureDemoModal
+        isOpen={demoModal.isOpen}
+        onClose={() => setDemoModal({ isOpen: false, feature: null as any })}
+        feature={demoModal.feature}
+      />
     </div>
   )
 }
