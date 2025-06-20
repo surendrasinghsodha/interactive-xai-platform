@@ -6,32 +6,185 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Brain, Database, BarChart3, Eye, Zap, Activity, ArrowRight } from "lucide-react"
+import { Brain, Database, BarChart3, Eye, Zap, Activity, ArrowRight, RefreshCw } from "lucide-react"
 import Link from "next/link"
 
-// Sample data for demonstration
-const sampleData = [
-  { id: 1, age: 22, sex: "male", embarked: "S", fare: 7.25, survived: 0, selected: false },
-  { id: 2, age: 38, sex: "female", embarked: "C", fare: 71.28, survived: 1, selected: false },
-  { id: 3, age: 26, sex: "female", embarked: "S", fare: 7.92, survived: 1, selected: false },
-  { id: 4, age: 35, sex: "female", embarked: "S", fare: 53.1, survived: 1, selected: false },
-  { id: 5, age: 35, sex: "male", embarked: "S", fare: 8.05, survived: 0, selected: false },
-  { id: 6, age: 54, sex: "male", embarked: "S", fare: 51.86, survived: 0, selected: false },
-  { id: 7, age: 2, sex: "male", embarked: "S", fare: 21.08, survived: 0, selected: false },
-  { id: 8, age: 27, sex: "female", embarked: "S", fare: 11.13, survived: 1, selected: false },
-]
+interface DatasetInfo {
+  fileName: string
+  headers: string[]
+  data: any[]
+  uploadTime: string
+  fileSize: number
+  totalRows: number
+}
+
+interface DatasetMetadata {
+  fileName: string
+  headers: string[]
+  uploadTime: string
+  fileSize: number
+  totalRows: number
+  hasData: boolean
+}
 
 export default function ExplorePage() {
   const [selectedRows, setSelectedRows] = useState<number[]>([])
   const [selectedModel, setSelectedModel] = useState<string>("")
   const [isLoaded, setIsLoaded] = useState(false)
+  const [datasetInfo, setDatasetInfo] = useState<DatasetInfo | null>(null)
+  const [displayData, setDisplayData] = useState<any[]>([])
+  const [currentPage, setCurrentPage] = useState(0)
+  const [isLoadingData, setIsLoadingData] = useState(false)
+  const rowsPerPage = 8
 
   useEffect(() => {
     setIsLoaded(true)
+    loadDataset()
   }, [])
+
+  const loadDataset = () => {
+    setIsLoadingData(true)
+
+    // First try to get data from global cache
+    if (globalThis.uploadedDatasetCache) {
+      const cachedData = globalThis.uploadedDatasetCache
+      setDatasetInfo(cachedData)
+      setDisplayData(cachedData.data.slice(0, rowsPerPage))
+      setIsLoadingData(false)
+      return
+    }
+
+    // If no cache, try to get metadata from localStorage
+    const storedMetadata = localStorage.getItem("datasetMetadata")
+    if (storedMetadata) {
+      try {
+        const metadata: DatasetMetadata = JSON.parse(storedMetadata)
+        if (metadata.hasData) {
+          // Create a dataset info object with metadata only
+          const datasetFromMetadata: DatasetInfo = {
+            fileName: metadata.fileName,
+            headers: metadata.headers,
+            data: [], // No actual data, will show message
+            uploadTime: metadata.uploadTime,
+            fileSize: metadata.fileSize,
+            totalRows: metadata.totalRows,
+          }
+          setDatasetInfo(datasetFromMetadata)
+          setDisplayData([])
+          setIsLoadingData(false)
+          return
+        }
+      } catch (error) {
+        console.error("Error parsing stored metadata:", error)
+      }
+    }
+
+    // Fallback to sample data
+    setFallbackData()
+    setIsLoadingData(false)
+  }
+
+  const setFallbackData = () => {
+    const fallbackDataset = {
+      fileName: "Titanic Dataset (Sample)",
+      headers: ["id", "age", "sex", "embarked", "fare", "survived"],
+      data: [
+        { id: 1, age: 22, sex: "male", embarked: "S", fare: 7.25, survived: 0 },
+        { id: 2, age: 38, sex: "female", embarked: "C", fare: 71.28, survived: 1 },
+        { id: 3, age: 26, sex: "female", embarked: "S", fare: 7.92, survived: 1 },
+        { id: 4, age: 35, sex: "female", embarked: "S", fare: 53.1, survived: 1 },
+        { id: 5, age: 35, sex: "male", embarked: "S", fare: 8.05, survived: 0 },
+        { id: 6, age: 54, sex: "male", embarked: "S", fare: 51.86, survived: 0 },
+        { id: 7, age: 2, sex: "male", embarked: "S", fare: 21.08, survived: 0 },
+        { id: 8, age: 27, sex: "female", embarked: "S", fare: 11.13, survived: 1 },
+      ],
+      uploadTime: new Date().toISOString(),
+      fileSize: 1024,
+      totalRows: 8,
+    }
+    setDatasetInfo(fallbackDataset)
+    setDisplayData(fallbackDataset.data)
+  }
+
+  const loadPage = (page: number) => {
+    if (!datasetInfo || !globalThis.uploadedDatasetCache) return
+
+    const startIndex = page * rowsPerPage
+    const endIndex = startIndex + rowsPerPage
+    const pageData = globalThis.uploadedDatasetCache.data.slice(startIndex, endIndex)
+    setDisplayData(pageData)
+    setCurrentPage(page)
+    setSelectedRows([]) // Clear selection when changing pages
+  }
 
   const toggleRowSelection = (id: number) => {
     setSelectedRows((prev) => (prev.includes(id) ? prev.filter((rowId) => rowId !== id) : [...prev, id]))
+  }
+
+  const selectAllRows = () => {
+    if (selectedRows.length === displayData.length) {
+      setSelectedRows([])
+    } else {
+      setSelectedRows(displayData.map((row) => row.id))
+    }
+  }
+
+  const clearSelection = () => {
+    setSelectedRows([])
+  }
+
+  const getDatasetName = () => {
+    if (!datasetInfo) return "Dataset"
+    return datasetInfo.fileName.replace(/\.(csv|json|xlsx|xls)$/i, "")
+  }
+
+  const getPredictionForRow = (row: any) => {
+    // Simple prediction logic based on available data
+    if (datasetInfo?.headers.includes("survived")) {
+      return row.survived ? "Survived" : "Did not survive"
+    } else if (datasetInfo?.headers.includes("target")) {
+      return row.target ? "Positive" : "Negative"
+    } else if (datasetInfo?.headers.includes("class")) {
+      return row.class
+    } else {
+      // Generic prediction
+      return Math.random() > 0.5 ? "Positive" : "Negative"
+    }
+  }
+
+  const getBadgeVariant = (value: any, header: string) => {
+    if (header === "sex" || header === "gender") {
+      return value === "female" ? "secondary" : "outline"
+    } else if (header === "survived" || header === "target") {
+      return value ? "default" : "destructive"
+    }
+    return "secondary"
+  }
+
+  const getBadgeColor = (value: any, header: string) => {
+    if (header === "sex" || header === "gender") {
+      return value === "female"
+        ? "bg-pink-100 text-pink-700 border-pink-200"
+        : "bg-blue-100 text-blue-700 border-blue-200"
+    } else if (header === "survived" || header === "target") {
+      return value ? "bg-green-100 text-green-700 border-green-200" : "bg-red-100 text-red-700 border-red-200"
+    }
+    return "bg-gray-100 text-gray-700 border-gray-200"
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+  }
+
+  const totalPages = datasetInfo ? Math.ceil(datasetInfo.totalRows / rowsPerPage) : 0
+  const hasLargeDataset = datasetInfo && datasetInfo.totalRows > rowsPerPage
+
+  if (!datasetInfo) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>
   }
 
   return (
@@ -127,111 +280,166 @@ export default function ExplorePage() {
                 <CardHeader>
                   <CardTitle className="flex items-center text-gray-800">
                     <Database className="mr-2 h-5 w-5 text-orange-500" />
-                    Dataset: Titanic Survival Prediction
+                    Dataset: {getDatasetName()}
                   </CardTitle>
                   <CardDescription className="text-gray-600">
-                    Select data points to generate explanations for model predictions
+                    {displayData.length > 0
+                      ? `Select data points to generate explanations for model predictions`
+                      : `Dataset metadata loaded. Re-upload file to view data.`}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="rounded-md border border-orange-200 overflow-hidden">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="border-b border-orange-200 bg-orange-50">
-                          <TableHead className="w-12 text-orange-700 font-medium">Select</TableHead>
-                          <TableHead className="text-orange-700 font-medium">ID</TableHead>
-                          <TableHead className="text-orange-700 font-medium">Age</TableHead>
-                          <TableHead className="text-orange-700 font-medium">Sex</TableHead>
-                          <TableHead className="text-orange-700 font-medium">Embarked</TableHead>
-                          <TableHead className="text-orange-700 font-medium">Fare</TableHead>
-                          <TableHead className="text-orange-700 font-medium">Survived</TableHead>
-                          <TableHead className="text-orange-700 font-medium">Prediction</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {sampleData.map((row, index) => (
-                          <TableRow
-                            key={row.id}
-                            className={`border-b border-orange-100 hover:bg-orange-50 transition-all duration-300 ${
-                              selectedRows.includes(row.id) ? "bg-orange-100 shadow-sm" : ""
-                            }`}
-                          >
-                            <TableCell>
-                              <input
-                                type="checkbox"
-                                checked={selectedRows.includes(row.id)}
-                                onChange={() => toggleRowSelection(row.id)}
-                                className="rounded border-orange-300 text-orange-500 focus:ring-orange-400 focus:ring-offset-0"
-                              />
-                            </TableCell>
-                            <TableCell className="font-medium text-gray-800">{row.id}</TableCell>
-                            <TableCell className="text-gray-700">{row.age}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={row.sex === "female" ? "secondary" : "outline"}
-                                className={
-                                  row.sex === "female"
-                                    ? "bg-pink-100 text-pink-700 border-pink-200"
-                                    : "bg-blue-100 text-blue-700 border-blue-200"
-                                }
+                  {displayData.length > 0 ? (
+                    <>
+                      <div className="rounded-md border border-orange-200 overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-b border-orange-200 bg-orange-50">
+                              <TableHead className="w-12 text-orange-700 font-medium">Select</TableHead>
+                              {datasetInfo.headers.map((header, index) => (
+                                <TableHead key={index} className="text-orange-700 font-medium capitalize">
+                                  {header}
+                                </TableHead>
+                              ))}
+                              <TableHead className="text-orange-700 font-medium">Prediction</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {displayData.map((row, index) => (
+                              <TableRow
+                                key={row.id}
+                                className={`border-b border-orange-100 hover:bg-orange-50 transition-all duration-300 ${
+                                  selectedRows.includes(row.id) ? "bg-orange-100 shadow-sm" : ""
+                                }`}
                               >
-                                {row.sex}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-gray-700">{row.embarked}</TableCell>
-                            <TableCell className="text-gray-700">${row.fare}</TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={row.survived ? "default" : "destructive"}
-                                className={
-                                  row.survived
-                                    ? "bg-green-100 text-green-700 border-green-200"
-                                    : "bg-red-100 text-red-700 border-red-200"
-                                }
-                              >
-                                {row.survived ? "Yes" : "No"}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge
-                                variant={row.survived ? "default" : "destructive"}
-                                className={
-                                  row.survived
-                                    ? "bg-green-100 text-green-700 border-green-200"
-                                    : "bg-red-100 text-red-700 border-red-200"
-                                }
-                              >
-                                {row.survived ? "Survived" : "Did not survive"}
-                              </Badge>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
+                                <TableCell>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedRows.includes(row.id)}
+                                    onChange={() => toggleRowSelection(row.id)}
+                                    className="rounded border-orange-300 text-orange-500 focus:ring-orange-400 focus:ring-offset-0"
+                                  />
+                                </TableCell>
+                                {datasetInfo.headers.map((header, colIndex) => (
+                                  <TableCell key={colIndex} className="text-gray-700">
+                                    {header === "sex" ||
+                                    header === "gender" ||
+                                    header === "survived" ||
+                                    header === "target" ? (
+                                      <Badge
+                                        variant={getBadgeVariant(row[header], header)}
+                                        className={getBadgeColor(row[header], header)}
+                                      >
+                                        {row[header]?.toString() || "N/A"}
+                                      </Badge>
+                                    ) : (
+                                      row[header]?.toString() || "N/A"
+                                    )}
+                                  </TableCell>
+                                ))}
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      getPredictionForRow(row).includes("Survived") ||
+                                      getPredictionForRow(row) === "Positive"
+                                        ? "default"
+                                        : "destructive"
+                                    }
+                                    className={
+                                      getPredictionForRow(row).includes("Survived") ||
+                                      getPredictionForRow(row) === "Positive"
+                                        ? "bg-green-100 text-green-700 border-green-200"
+                                        : "bg-red-100 text-red-700 border-red-200"
+                                    }
+                                  >
+                                    {getPredictionForRow(row)}
+                                  </Badge>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
 
-                  <div className="mt-4 flex items-center justify-between">
-                    <p className="text-sm text-orange-600 flex items-center font-medium">
-                      <Activity className="mr-2 h-4 w-4" />
-                      {selectedRows.length} of {sampleData.length} rows selected
-                    </p>
-                    <div className="flex items-center space-x-2">
+                      {/* Pagination for large datasets */}
+                      {hasLargeDataset && (
+                        <div className="mt-4 flex items-center justify-between">
+                          <p className="text-sm text-gray-600">
+                            Showing {currentPage * rowsPerPage + 1} to{" "}
+                            {Math.min((currentPage + 1) * rowsPerPage, datasetInfo.totalRows)} of{" "}
+                            {datasetInfo.totalRows.toLocaleString()} rows
+                          </p>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadPage(currentPage - 1)}
+                              disabled={currentPage === 0}
+                              className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                            >
+                              Previous
+                            </Button>
+                            <span className="text-sm text-gray-600">
+                              Page {currentPage + 1} of {totalPages}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => loadPage(currentPage + 1)}
+                              disabled={currentPage >= totalPages - 1}
+                              className="border-orange-200 text-orange-600 hover:bg-orange-50"
+                            >
+                              Next
+                            </Button>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="mt-4 flex items-center justify-between">
+                        <p className="text-sm text-orange-600 flex items-center font-medium">
+                          <Activity className="mr-2 h-4 w-4" />
+                          {selectedRows.length} of {displayData.length} rows selected
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={selectAllRows}
+                            className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 transition-all duration-300"
+                          >
+                            {selectedRows.length === displayData.length ? "Deselect All" : "Select All"}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={clearSelection}
+                            className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300"
+                          >
+                            Clear Selection
+                          </Button>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Database className="mx-auto h-16 w-16 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-700 mb-2">Dataset Not Available</h3>
+                      <p className="text-gray-600 mb-4">
+                        The dataset data is not currently loaded in memory. Please re-upload your file to view and
+                        select data.
+                      </p>
                       <Button
+                        asChild
                         variant="outline"
-                        size="sm"
-                        className="border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 transition-all duration-300"
+                        className="border-orange-200 text-orange-600 hover:bg-orange-50"
                       >
-                        Select All
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-purple-200 text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300"
-                      >
-                        Clear Selection
+                        <Link href="/upload" className="flex items-center">
+                          <RefreshCw className="mr-2 h-4 w-4" />
+                          Re-upload Dataset
+                        </Link>
                       </Button>
                     </div>
-                  </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -289,17 +497,19 @@ export default function ExplorePage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {[
-                    { label: "Total Rows", value: "891" },
-                    { label: "Features", value: "8" },
-                    { label: "Target", value: "Survived" },
-                    { label: "Missing Values", value: "177" },
+                    { label: "Total Rows", value: datasetInfo.totalRows.toLocaleString() },
+                    { label: "Features", value: datasetInfo.headers.length.toString() },
+                    { label: "File Size", value: formatFileSize(datasetInfo.fileSize) },
+                    { label: "Uploaded", value: new Date(datasetInfo.uploadTime).toLocaleDateString() },
                   ].map((item, index) => (
                     <div
                       key={index}
                       className="flex justify-between items-center p-2 rounded bg-orange-50 border border-orange-100 hover:bg-orange-100 transition-all duration-300"
                     >
                       <span className="text-sm text-gray-700">{item.label}:</span>
-                      <span className="text-sm font-medium text-orange-600">{item.value}</span>
+                      <span className="text-sm font-medium text-orange-600 max-w-32 truncate" title={item.value}>
+                        {item.value}
+                      </span>
                     </div>
                   ))}
                 </CardContent>
@@ -322,7 +532,7 @@ export default function ExplorePage() {
                 </CardContent>
               </Card>
 
-              {selectedRows.length > 0 && selectedModel && (
+              {selectedRows.length > 0 && selectedModel && displayData.length > 0 && (
                 <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg">
                   <CardContent className="pt-6">
                     <div className="text-center space-y-4">

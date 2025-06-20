@@ -9,14 +9,35 @@ import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
-import { Upload, FileText, Brain, Database, ArrowRight, CheckCircle, Zap, Sparkles } from "lucide-react"
+import { Upload, FileText, Brain, Database, ArrowRight, CheckCircle, Zap, Sparkles, X } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+
+// Global variable to store large dataset in memory
+declare global {
+  var uploadedDatasetCache: {
+    fileName: string
+    headers: string[]
+    data: any[]
+    uploadTime: string
+    fileSize: number
+    totalRows: number
+  } | null
+}
 
 export default function UploadPage() {
+  const router = useRouter()
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [uploadComplete, setUploadComplete] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
+
+  const [csvData, setCsvData] = useState<any[]>([])
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
+  const [fileName, setFileName] = useState<string>("")
+  const [fileError, setFileError] = useState<string>("")
+  const [fileSize, setFileSize] = useState<number>(0)
+  const [totalRows, setTotalRows] = useState<number>(0)
 
   useEffect(() => {
     setIsLoaded(true)
@@ -26,21 +47,110 @@ export default function UploadPage() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    setFileName(file.name)
+    setFileSize(file.size)
+    setFileError("")
     setIsUploading(true)
     setUploadProgress(0)
 
-    // Simulate upload progress with smooth animation
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setIsUploading(false)
-          setUploadComplete(true)
-          return 100
-        }
-        return prev + Math.random() * 15
-      })
-    }, 150)
+    try {
+      // Check file type
+      if (!file.name.toLowerCase().endsWith(".csv")) {
+        throw new Error("Please upload a CSV file")
+      }
+
+      // Check file size (limit to 150MB for demo)
+      if (file.size > 150 * 1024 * 1024) {
+        throw new Error("File size exceeds 150MB limit")
+      }
+
+      // Read file content
+      const text = await file.text()
+
+      // Simulate upload progress
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => {
+          if (prev >= 90) {
+            clearInterval(interval)
+            return 90
+          }
+          return prev + Math.random() * 15
+        })
+      }, 150)
+
+      // Parse CSV efficiently
+      const lines = text.split("\n").filter((line) => line.trim())
+      if (lines.length === 0) {
+        throw new Error("CSV file is empty")
+      }
+
+      const headers = lines[0].split(",").map((header) => header.trim().replace(/"/g, ""))
+      const allData = []
+
+      // Parse all data
+      for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(",").map((value) => value.trim().replace(/"/g, ""))
+        const row: any = { id: i }
+        headers.forEach((header, j) => {
+          row[header] = values[j] || ""
+        })
+        allData.push(row)
+      }
+
+      setTotalRows(allData.length)
+      setCsvHeaders(headers)
+      setCsvData(allData.slice(0, 10)) // Show first 10 for preview
+
+      // Store dataset in global memory cache instead of localStorage
+      globalThis.uploadedDatasetCache = {
+        fileName: file.name,
+        headers: headers,
+        data: allData,
+        uploadTime: new Date().toISOString(),
+        fileSize: file.size,
+        totalRows: allData.length,
+      }
+
+      // Store only metadata in localStorage for persistence
+      try {
+        localStorage.setItem(
+          "datasetMetadata",
+          JSON.stringify({
+            fileName: file.name,
+            headers: headers,
+            uploadTime: new Date().toISOString(),
+            fileSize: file.size,
+            totalRows: allData.length,
+            hasData: true,
+          }),
+        )
+      } catch (storageError) {
+        console.warn("Could not store metadata in localStorage:", storageError)
+      }
+
+      // Complete upload
+      setTimeout(() => {
+        setUploadProgress(100)
+        setIsUploading(false)
+        setUploadComplete(true)
+      }, 500)
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Failed to read file")
+      setIsUploading(false)
+      setUploadProgress(0)
+    }
+  }
+
+  const handleContinue = () => {
+    router.push("/explore")
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes"
+    const k = 1024
+    const sizes = ["Bytes", "KB", "MB", "GB"]
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
   return (
@@ -169,11 +279,11 @@ export default function UploadPage() {
                           >
                             Drop your dataset here or click to browse
                           </Label>
-                          <p className="text-sm text-gray-600">Supports CSV, JSON, and Excel files (max 50MB)</p>
+                          <p className="text-sm text-gray-600">Supports CSV files up to 150MB</p>
                           <Input
                             id="dataset-upload"
                             type="file"
-                            accept=".csv,.json,.xlsx,.xls"
+                            accept=".csv"
                             onChange={handleFileUpload}
                             className="hidden"
                           />
@@ -185,7 +295,7 @@ export default function UploadPage() {
                           <div className="flex justify-between text-sm text-orange-600">
                             <span className="flex items-center">
                               <Zap className="mr-2 h-4 w-4" />
-                              Uploading dataset...
+                              Processing dataset... ({formatFileSize(fileSize)})
                             </span>
                             <span>{Math.round(uploadProgress)}%</span>
                           </div>
@@ -196,10 +306,17 @@ export default function UploadPage() {
                         </div>
                       )}
 
+                      {fileError && (
+                        <div className="flex items-center space-x-2 text-red-600 bg-red-50 p-3 rounded-lg border border-red-200">
+                          <X className="h-5 w-5" />
+                          <span>{fileError}</span>
+                        </div>
+                      )}
+
                       {uploadComplete && (
                         <div className="flex items-center space-x-2 text-green-600">
                           <CheckCircle className="h-5 w-5" />
-                          <span>Dataset uploaded successfully!</span>
+                          <span>Dataset processed successfully! ({totalRows.toLocaleString()} rows)</span>
                         </div>
                       )}
                     </TabsContent>
@@ -234,6 +351,76 @@ export default function UploadPage() {
                   </Tabs>
                 </CardContent>
               </Card>
+
+              {/* CSV Preview Section */}
+              {csvData.length > 0 && (
+                <div className="mt-8">
+                  <Card className="bg-white/80 backdrop-blur-sm border-green-200 shadow-lg">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-gray-800">
+                        <Database className="mr-2 h-5 w-5 text-green-500" />
+                        Dataset Preview: {fileName}
+                      </CardTitle>
+                      <CardDescription className="text-gray-600">
+                        Showing first 10 rows of {totalRows.toLocaleString()} total rows with {csvHeaders.length}{" "}
+                        columns
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="overflow-x-auto">
+                        <table className="w-full border-collapse border border-green-200 rounded-lg overflow-hidden">
+                          <thead>
+                            <tr className="bg-green-50">
+                              {csvHeaders.map((header, index) => (
+                                <th
+                                  key={index}
+                                  className="border border-green-200 px-3 py-2 text-left text-sm font-medium text-green-700"
+                                >
+                                  {header}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {csvData.map((row, rowIndex) => (
+                              <tr key={rowIndex} className={rowIndex % 2 === 0 ? "bg-white" : "bg-green-50/30"}>
+                                {csvHeaders.map((header, colIndex) => (
+                                  <td
+                                    key={colIndex}
+                                    className="border border-green-200 px-3 py-2 text-sm text-gray-700"
+                                  >
+                                    {row[header]}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Dataset Statistics */}
+                      <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+                          <div className="text-sm text-green-600">Total Rows</div>
+                          <div className="text-lg font-bold text-green-700">{totalRows.toLocaleString()}</div>
+                        </div>
+                        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                          <div className="text-sm text-blue-600">Columns</div>
+                          <div className="text-lg font-bold text-blue-700">{csvHeaders.length}</div>
+                        </div>
+                        <div className="bg-purple-50 p-3 rounded-lg border border-purple-200">
+                          <div className="text-sm text-purple-600">File Size</div>
+                          <div className="text-lg font-bold text-purple-700">{formatFileSize(fileSize)}</div>
+                        </div>
+                        <div className="bg-orange-50 p-3 rounded-lg border border-orange-200">
+                          <div className="text-sm text-orange-600">Status</div>
+                          <div className="text-lg font-bold text-orange-700">Ready</div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
             </div>
 
             {/* Sidebar */}
@@ -252,7 +439,7 @@ export default function UploadPage() {
                     <Button
                       key={index}
                       variant="outline"
-                      className="w-full justify-start border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300 transition-all duration-300"
+                      className="w-full justify-start btn-secondary-animated border-orange-200 text-orange-600 hover:bg-orange-50 hover:border-orange-300"
                     >
                       <FileText className="mr-2 h-4 w-4" />
                       {dataset}
@@ -263,23 +450,18 @@ export default function UploadPage() {
 
               <Card className="bg-white/80 backdrop-blur-sm border-purple-200 shadow-lg hover:shadow-xl transition-all duration-300">
                 <CardHeader>
-                  <CardTitle className="text-lg text-gray-800">Supported Formats</CardTitle>
+                  <CardTitle className="text-lg text-gray-800">File Requirements</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     <div>
                       <h4 className="font-medium mb-2 text-orange-600">Datasets</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {["CSV", "JSON", "Excel"].map((format, index) => (
-                          <Badge
-                            key={index}
-                            variant="secondary"
-                            className="bg-orange-100 text-orange-700 border-orange-200 hover:bg-orange-200 transition-all duration-300"
-                          >
-                            {format}
-                          </Badge>
-                        ))}
-                      </div>
+                      <ul className="text-sm text-gray-600 space-y-1">
+                        <li>• CSV format only</li>
+                        <li>• Maximum 150MB file size</li>
+                        <li>• First row should contain headers</li>
+                        <li>• Supports large datasets (millions of rows)</li>
+                      </ul>
                     </div>
                     <div>
                       <h4 className="font-medium mb-2 text-purple-600">Models</h4>
@@ -299,7 +481,7 @@ export default function UploadPage() {
                 </CardContent>
               </Card>
 
-              {uploadComplete && (
+              {uploadComplete && csvData.length > 0 && (
                 <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg">
                   <CardContent className="pt-6">
                     <div className="text-center space-y-4">
@@ -307,17 +489,17 @@ export default function UploadPage() {
                         <CheckCircle className="mx-auto h-12 w-12 text-green-500" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-green-700">Ready to proceed!</h3>
-                        <p className="text-sm text-green-600">Your data has been uploaded successfully.</p>
+                        <h3 className="font-medium text-green-700">Dataset loaded successfully!</h3>
+                        <p className="text-sm text-green-600">
+                          Processed {totalRows.toLocaleString()} rows with {csvHeaders.length} features.
+                        </p>
                       </div>
                       <Button
-                        asChild
-                        className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-400 hover:to-emerald-400 text-white border-0 shadow-lg hover:shadow-green-500/25 transition-all duration-300 hover:scale-105"
+                        onClick={handleContinue}
+                        className="w-full btn-upload-animated text-white border-0 shadow-lg"
                       >
-                        <Link href="/explore" className="flex items-center">
-                          Continue to Data Exploration
-                          <ArrowRight className="ml-2 h-4 w-4" />
-                        </Link>
+                        Continue to Data Exploration
+                        <ArrowRight className="ml-2 h-4 w-4 arrow-animated" />
                       </Button>
                     </div>
                   </CardContent>

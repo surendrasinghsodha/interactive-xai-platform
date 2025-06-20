@@ -3,20 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import {
-  X,
-  Play,
-  Pause,
-  RotateCcw,
-  Volume2,
-  Maximize,
-  BrainCircuit,
-  ShieldCheck,
-  Sparkles,
-  Zap,
-  Info,
-  FileCode,
-} from "lucide-react"
+import { X, Play, Pause, RotateCcw, Volume2, Maximize, Minimize } from "lucide-react"
 
 interface FeatureInfo {
   title: string
@@ -36,9 +23,11 @@ export function FeatureDemoModal({ isOpen, onClose, feature }: FeatureDemoModalP
   const [isPlaying, setIsPlaying] = useState(true)
   const [progress, setProgress] = useState(0)
   const [replayKey, setReplayKey] = useState(0)
-  const duration = 10 // Duration for animations
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const duration = 25 // Duration for animations
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
 
   const stopProgressInterval = () => {
     if (intervalRef.current) clearInterval(intervalRef.current)
@@ -54,9 +43,9 @@ export function FeatureDemoModal({ isOpen, onClose, feature }: FeatureDemoModalP
             setIsPlaying(false)
             return 100
           }
-          return prev + 100 / (duration * 10) // 100 steps over duration
+          return prev + 100 / (duration * 10)
         })
-      }, 100) // Update every 100ms
+      }, 100)
     }
     return stopProgressInterval
   }, [isOpen, isPlaying, replayKey, duration])
@@ -66,8 +55,62 @@ export function FeatureDemoModal({ isOpen, onClose, feature }: FeatureDemoModalP
       setProgress(0)
       setIsPlaying(true)
       setReplayKey((prev) => prev + 1)
+      setIsFullscreen(false) // Reset fullscreen when modal opens
     }
   }, [isOpen, feature])
+
+  // Handle fullscreen functionality
+  const toggleFullscreen = async () => {
+    if (!modalRef.current) return
+
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        if (modalRef.current.requestFullscreen) {
+          await modalRef.current.requestFullscreen()
+        } else if ((modalRef.current as any).webkitRequestFullscreen) {
+          await (modalRef.current as any).webkitRequestFullscreen()
+        } else if ((modalRef.current as any).msRequestFullscreen) {
+          await (modalRef.current as any).msRequestFullscreen()
+        }
+        setIsFullscreen(true)
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen()
+        } else if ((document as any).webkitExitFullscreen) {
+          await (document as any).webkitExitFullscreen()
+        } else if ((document as any).msExitFullscreen) {
+          await (document as any).msExitFullscreen()
+        }
+        setIsFullscreen(false)
+      }
+    } catch (error) {
+      console.error("Fullscreen error:", error)
+    }
+  }
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement
+      )
+      setIsFullscreen(isCurrentlyFullscreen)
+    }
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange)
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange)
+    document.addEventListener("msfullscreenchange", handleFullscreenChange)
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange)
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange)
+      document.removeEventListener("msfullscreenchange", handleFullscreenChange)
+    }
+  }, [])
 
   const togglePlay = () => {
     if (progress >= 100) {
@@ -83,105 +126,118 @@ export function FeatureDemoModal({ isOpen, onClose, feature }: FeatureDemoModalP
     setReplayKey((prev) => prev + 1)
   }
 
-  const formatTime = (seconds: number) => {
-    const secs = Math.floor(seconds % 60)
-    return `0:${secs.toString().padStart(2, "0")}`
-  }
-
   const renderDemo = () => {
     if (!feature) return null
-    const demoProps = { isPlaying: isPlaying && progress < 100, progress, duration }
 
     switch (feature.demoType) {
       case "upload":
-        return <UploadDemo key={replayKey} {...demoProps} />
+        return <UploadDemo key={replayKey} progress={progress} />
       case "explanations":
-        return <ExplanationsDemo key={replayKey} {...demoProps} />
+        return <ExplanationsDemo key={replayKey} progress={progress} />
       case "charts":
-        return <ChartsDemo key={replayKey} {...demoProps} />
+        return <ChartsDemo key={replayKey} progress={progress} />
       case "user-friendly":
-        return <UserFriendlyDemo key={replayKey} {...demoProps} />
+        return <UserFriendlyDemo key={replayKey} progress={progress} />
       case "reliability":
-        return <ReliabilityDemo key={replayKey} {...demoProps} />
+        return <ReliabilityDemo key={replayKey} progress={progress} />
       case "compare":
-        return <CompareDemo key={replayKey} {...demoProps} />
+        return <CompareDemo key={replayKey} progress={progress} />
+      case "shap":
+        return <ShapDemo key={replayKey} progress={progress} onClose={onClose} isFullscreen={isFullscreen} />
+      case "lime":
+        return <LimeDemo key={replayKey} progress={progress} onClose={onClose} isFullscreen={isFullscreen} />
       default:
-        return <div className="text-white text-2xl animate-pulse">Demo Coming Soon!</div>
+        return (
+          <div className="flex items-center justify-center h-64 bg-gradient-to-br from-gray-100 to-gray-200 rounded-lg">
+            <div className="text-center space-y-4">
+              <div className="text-6xl animate-bounce-gentle">🚧</div>
+              <p className="text-gray-600 font-medium">Demo Coming Soon!</p>
+              <p className="text-sm text-gray-500">Feature: {feature.demoType}</p>
+            </div>
+          </div>
+        )
     }
   }
 
+  if (!feature) return null
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl w-full bg-gray-900/80 backdrop-blur-lg border-2 border-purple-500/50 text-white overflow-hidden shadow-2xl shadow-purple-500/20">
-        <DialogHeader className="border-b border-purple-400/30 pb-4 relative z-10">
+      <DialogContent
+        ref={modalRef}
+        className={`${
+          isFullscreen
+            ? "fixed inset-0 w-screen h-screen max-w-none max-h-none m-0 rounded-none border-0"
+            : "max-w-[95vw] w-full h-[95vh]"
+        } p-0 overflow-hidden bg-gradient-to-br from-slate-50 to-slate-100 border-2 border-slate-200 transition-all duration-300`}
+      >
+        {/* Header */}
+        <DialogHeader
+          className={`${isFullscreen ? "p-8 pb-6" : "p-6 pb-4"} bg-white/90 backdrop-blur-sm border-b border-slate-200`}
+        >
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-cyan-400 via-pink-400 to-orange-400 bg-clip-text text-transparent flex items-center">
-              <span className="text-3xl mr-3 animate-bounce-gentle">{feature?.character}</span>
-              {feature?.title} Demo
-            </DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="text-purple-300 hover:bg-purple-500/20 hover:text-white"
-            >
+            <div className="flex items-center space-x-4">
+              <div className={`${isFullscreen ? "text-4xl" : "text-3xl"} animate-bounce-gentle`}>
+                {feature.character}
+              </div>
+              <div>
+                <DialogTitle
+                  className={`${isFullscreen ? "text-3xl" : "text-2xl"} font-bold bg-gradient-to-r from-orange-500 to-purple-500 bg-clip-text text-transparent`}
+                >
+                  {feature.title} Demo
+                </DialogTitle>
+                <p className={`text-slate-600 mt-1 ${isFullscreen ? "text-lg" : ""}`}>{feature.description}</p>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm" onClick={onClose} className="hover:bg-slate-200 rounded-full p-2">
               <X className="h-5 w-5" />
             </Button>
           </div>
         </DialogHeader>
 
+        {/* Demo Content */}
+        <div className={`flex-1 ${isFullscreen ? "p-8" : "p-4"} overflow-auto`}>
+          <div className="bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden h-full min-h-[600px]">
+            {renderDemo()}
+          </div>
+        </div>
+
+        {/* Controls */}
         <div
-          className={`relative min-h-[500px] bg-black/50 rounded-lg overflow-hidden group ${!isPlaying && progress < 100 ? "demo-paused" : ""}`}
+          className={`${isFullscreen ? "p-8 pt-6" : "p-6 pt-4"} bg-white/90 backdrop-blur-sm border-t border-slate-200`}
         >
-          <div className="absolute inset-0 bg-grid-pattern opacity-20"></div>
-          <div className="absolute -top-10 -left-10 text-8xl text-yellow-500/20 opacity-50 animate-spin-slow transform-gpu">
-            💥
-          </div>
-          <div className="absolute -bottom-10 -right-10 text-7xl text-pink-500/20 opacity-50 animate-ping-slow transform-gpu">
-            ✨
-          </div>
-
-          <div className="h-full flex items-center justify-center p-8">{renderDemo()}</div>
-
-          <div
-            className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 to-transparent p-4 transition-opacity duration-300 ${isPlaying && progress < 100 ? "opacity-0 group-hover:opacity-100" : "opacity-100"}`}
-          >
-            <div className="w-full bg-gray-700/50 rounded-full h-1.5 mb-3">
-              <div
-                className="bg-gradient-to-r from-cyan-400 to-purple-500 h-1.5 rounded-full"
-                style={{ width: `${progress}%`, transition: progress > 0 ? "width 0.1s linear" : "none" }}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={togglePlay}
-                  className="text-white hover:bg-white/20 w-10 h-10 rounded-full"
-                >
-                  {isPlaying && progress < 100 ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-                </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={replay}
-                  className="text-white hover:bg-white/20 w-10 h-10 rounded-full"
-                >
-                  <RotateCcw className="h-5 w-5" />
-                </Button>
-              </div>
-              <div className="text-white text-sm font-mono">
-                {formatTime((progress / 100) * duration)} / {formatTime(duration)}
-              </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Button variant="outline" size="sm" onClick={togglePlay} className="hover:bg-slate-100">
+                {isPlaying && progress < 100 ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+              <Button variant="outline" size="sm" onClick={replay} className="hover:bg-slate-100">
+                <RotateCcw className="h-4 w-4" />
+              </Button>
               <div className="flex items-center space-x-2">
-                <Button size="icon" variant="ghost" className="text-white hover:bg-white/20">
-                  <Volume2 className="h-5 w-5" />
-                </Button>
-                <Button size="icon" variant="ghost" className="text-white hover:bg-white/20">
-                  <Maximize className="h-5 w-5" />
-                </Button>
+                <Volume2 className="h-4 w-4 text-slate-500" />
+                <span className="text-sm text-slate-600">Sound: Off</span>
               </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className={`${isFullscreen ? "w-48" : "w-32"} h-2 bg-slate-200 rounded-full overflow-hidden`}>
+                  <div
+                    className="h-full bg-gradient-to-r from-orange-500 to-purple-500 transition-all duration-100 ease-linear"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <span className="text-sm text-slate-600 font-mono">{Math.round(progress)}%</span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="hover:bg-slate-100"
+                onClick={toggleFullscreen}
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+              </Button>
             </div>
           </div>
         </div>
@@ -190,562 +246,1509 @@ export function FeatureDemoModal({ isOpen, onClose, feature }: FeatureDemoModalP
   )
 }
 
-// --- DEMO COMPONENTS ---
-interface DemoComponentProps {
-  isPlaying: boolean
-  progress: number
-  duration: number
-}
+// SHAP DEMO - The Fair Share Explainer
+function ShapDemo({
+  progress,
+  onClose,
+  isFullscreen,
+}: { progress: number; onClose: () => void; isFullscreen?: boolean }) {
+  const [stage, setStage] = useState(0)
+  const [comicText, setComicText] = useState("")
 
-const DemoTextOverlay = ({ text, isVisible }: { text: string; isVisible: boolean }) => (
-  <div
-    className={`absolute bottom-8 left-1/2 -translate-x-1/2 w-max max-w-[90%] p-3 bg-black/70 border border-purple-400/50 rounded-lg shadow-xl text-center text-sm md:text-base text-purple-200 transition-all duration-500 ease-out ${
-      isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
-    }`}
-    style={{ backdropFilter: "blur(3px)" }}
-  >
-    <Info className="inline-block h-4 w-4 mr-2 text-purple-300" />
-    {text}
-  </div>
-)
-
-// v27 UploadDemo - Replace your existing UploadDemo with this
-function UploadDemo({ isPlaying, progress }: DemoComponentProps) {
-  const portalMaterializes = progress > 5
-  const dataPacketAppears = progress > 15
-  const dataPacketMoves = progress > 25
-  const portalSuctionActive = progress > 45 && progress < 70
-  const dataPacketAbsorbed = progress >= 70
-  const absorptionEffectActive = progress >= 70 && progress < 80
-  const comicTextPop = progress >= 70 && progress < 78
-  const successPulse = progress >= 78 && progress < 88
-  const finalMessageVisible = progress > 85
-  const textOverlayVisible = progress > 30 && progress < 80
-
-  // Data packet path: from top-right towards center portal
-  const initialX = 80,
-    initialY = 20 // Percentage
-  const targetX = 50,
-    targetY = 50 // Percentage
-
-  let currentX = initialX
-  let currentY = initialY
-  let currentScale = 1
-
-  if (dataPacketMoves && !dataPacketAbsorbed) {
-    const moveProgress = Math.max(0, (progress - 25) / (70 - 25)) // Normalize progress for movement phase
-    currentX = initialX + (targetX - initialX) * moveProgress
-    currentY = initialY + (targetY - initialY) * moveProgress
-    currentScale = 1 - 0.5 * moveProgress // Shrinks as it moves
-  } else if (dataPacketAbsorbed) {
-    currentX = targetX
-    currentY = targetY
-    currentScale = 0
-  }
+  useEffect(() => {
+    if (progress < 20) {
+      setStage(0)
+      setComicText("Meet the AI Judge!")
+    } else if (progress < 40) {
+      setStage(1)
+      setComicText("Weighing Evidence!")
+    } else if (progress < 60) {
+      setStage(2)
+      setComicText("Fair Shares!")
+    } else if (progress < 80) {
+      setStage(3)
+      setComicText("Balanced Decision!")
+    } else {
+      setStage(4)
+      setComicText("Justice Served!")
+    }
+  }, [progress])
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center text-white font-bold relative overflow-hidden">
-      {/* Portal */}
-      <div
-        className={`w-56 h-56 relative transition-opacity duration-500 ${portalMaterializes ? "opacity-100" : "opacity-0"}`}
-      >
-        <div
-          className={`w-full h-full rounded-full bg-purple-700/50 animate-portal-pulse-strong ${portalSuctionActive ? "animate-portal-suck-effect" : ""}`}
-        >
-          <div className="absolute inset-0 rounded-full bg-black/70 animate-vortex-swirl-fast opacity-80"></div>
-          <div className="absolute inset-2 rounded-full bg-gradient-radial from-transparent via-purple-900/80 to-purple-600"></div>
-        </div>
-        <div className="absolute inset-0 rounded-full border-4 border-cyan-400 animate-pulse-neon"></div>
-        {/* Portal suction particles */}
-        {portalSuctionActive &&
-          [...Array(10)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-pink-400 rounded-full animate-portal-suction-particle"
-              style={{ animationDelay: `${i * 0.05}s` }}
-            ></div>
-          ))}
-        {/* Success Pulse */}
-        {successPulse && (
-          <div className="absolute inset-0 rounded-full bg-green-500/50 animate-success-pulse-emit"></div>
-        )}
-      </div>
-
-      {/* Data Packet */}
-      {dataPacketAppears && !dataPacketAbsorbed && (
-        <div
-          className="absolute transition-all duration-100 ease-in-out"
-          style={{
-            top: `${currentY}%`,
-            left: `${currentX}%`,
-            transform: `translate(-50%, -50%) scale(${currentScale})`,
-          }}
-        >
-          <div className="relative w-20 h-20 animate-data-packet-float">
-            <FileCode className="w-full h-full text-cyan-300 filter drop-shadow-[0_0_8px_rgba(0,255,255,0.7)]" />
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-2 h-2 bg-white rounded-full animate-data-bit-orbit"
-                style={{ animationDelay: `${i * 0.3}s` }}
-              ></div>
-            ))}
-          </div>
-          {/* Data Trail */}
-          {dataPacketMoves &&
-            [...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-1 h-1 bg-cyan-400 rounded-full animate-data-trail-particle"
-                style={{
-                  top: `${Math.random() * 100}%`,
-                  left: `${Math.random() * 100}%`,
-                  animationDelay: `${i * 0.05}s`,
-                  opacity: Math.max(0, (progress - 25 - i * 2) / 30), // Fade in trail
-                }}
-              ></div>
-            ))}
-        </div>
-      )}
-
-      {/* Absorption Effect & Comic Text */}
-      {absorptionEffectActive && (
-        <>
-          {[...Array(12)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-12 bg-yellow-400 animate-data-packet-shatter"
-              style={{
-                top: "50%",
-                left: "50%",
-                transformOrigin: "0 0",
-                transform: `translate(-50%, -50%) rotate(${i * 30}deg) scaleY(0)`, // Initial scaleY(0)
-                animationDelay: `${i * 0.02}s`,
-              }}
-            ></div>
-          ))}
-          <div
-            className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-5xl font-black text-yellow-300 animate-comic-text-pop ${comicTextPop ? "opacity-100" : "opacity-0"}`}
-          >
-            ZING!
-          </div>
-        </>
-      )}
-
-      {/* Final Success Message */}
-      <div
-        className={`text-4xl text-center mt-8 ${finalMessageVisible ? "animate-hologram-appear-strong" : "opacity-0"}`}
-      >
-        <p className="bg-gradient-to-r from-green-400 via-cyan-400 to-green-300 bg-clip-text text-transparent">
-          UPLOAD COMPLETE!
-        </p>
-        <p className="text-xl text-purple-300 mt-2">XAI Engine Primed!</p>
-      </div>
-      <DemoTextOverlay
-        text="Securely Upload: Datasets (CSV, JSON) & Models (.pkl, .h5)"
-        isVisible={textOverlayVisible}
-      />
-    </div>
-  )
-}
-
-// --- Other Demo Components (ExplanationsDemo, ChartsDemo, etc.) ---
-// These should remain largely the same as before v27, but ensure they
-// also use the DemoTextOverlay component if you implemented that step.
-// For brevity, I'm showing a simplified structure for them here.
-// Make sure their content and specific animations are as you had them
-// before the v27 UploadDemo revamp, plus the DemoTextOverlay.
-
-function ExplanationsDemo({ isPlaying, progress }: DemoComponentProps) {
-  const brainActive = progress > 5
-  const showShap = progress > 25
-  const showLime = progress > 45
-  const showInsight = progress > 75
-  const textVisible = progress > 50 && progress < 85 // Example timing
-
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-around text-white font-bold relative">
-      <div className={`relative mb-8 ${brainActive ? "animate-brain-scan" : "opacity-0"}`}>
-        <BrainCircuit className="w-40 h-40 text-pink-400" />
-        {brainActive &&
-          [...Array(8)].map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-yellow-300 rounded-full animate-brain-activity"
-              style={{ animationDelay: `${i * 0.15}s` }}
-            />
-          ))}
-        <div className="absolute -top-4 -right-4 text-2xl text-yellow-400 animate-pulse">⚡</div>
-      </div>
-
-      <div className="w-full max-w-2xl space-y-3">
-        <div
-          className={`p-3 rounded-lg border-2 border-pink-500/50 bg-black/40 backdrop-blur-sm transition-all duration-500 ${showShap ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-10"}`}
-        >
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-lg text-pink-300">SHAP Values</span>
-            <Sparkles className="w-5 h-5 text-pink-400 animate-pulse" />
-          </div>
-          {[
-            { label: "Age", val: -0.25, p: progress - 30 },
-            { label: "Income", val: 0.6, p: progress - 35 },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center text-sm my-1">
-              <span className="w-20 text-gray-300">{item.label}:</span>
-              <div className="w-full h-4 bg-gray-700 rounded-full mx-2">
-                <div
-                  className={`h-full rounded-full ${item.val > 0 ? "bg-green-500" : "bg-red-500"}`}
-                  style={{
-                    width: isPlaying && item.p > 0 ? `${Math.min(100, item.p * 2.5) * Math.abs(item.val)}%` : "0%",
-                    transition: "width 0.5s ease-out",
-                  }}
-                />
-              </div>
-              <span className={`w-12 text-right ${item.val > 0 ? "text-green-400" : "text-red-400"}`}>
-                {item.val.toFixed(2)}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        <div
-          className={`p-3 rounded-lg border-2 border-purple-500/50 bg-black/40 backdrop-blur-sm transition-all duration-500 ${showLime ? "opacity-100 translate-x-0" : "opacity-0 translate-x-10"}`}
-        >
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-lg text-purple-300">LIME Explanation</span>
-            <Zap className="w-5 h-5 text-purple-400 animate-wiggle" />
-          </div>
-          {[
-            { label: "Education", val: 0.35, p: progress - 50 },
-            { label: "Location", val: -0.15, p: progress - 55 },
-          ].map((item) => (
-            <div key={item.label} className="flex items-center text-sm my-1">
-              <span className="w-20 text-gray-300">{item.label}:</span>
-              <div className="w-full h-4 bg-gray-700 rounded-full mx-2">
-                <div
-                  className={`h-full rounded-full ${item.val > 0 ? "bg-blue-500" : "bg-orange-500"}`}
-                  style={{
-                    width: isPlaying && item.p > 0 ? `${Math.min(100, item.p * 2.5) * Math.abs(item.val)}%` : "0%",
-                    transition: "width 0.5s ease-out",
-                  }}
-                />
-              </div>
-              <span className={`w-12 text-right ${item.val > 0 ? "text-blue-400" : "text-orange-400"}`}>
-                {item.val.toFixed(2)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className={`mt-6 text-xl text-center ${showInsight ? "animate-hologram-appear" : "opacity-0"}`}>
-        <p className="bg-gradient-to-r from-yellow-400 to-pink-400 bg-clip-text text-transparent">
-          Key Insight: Income is a major factor!
+    <div
+      className={`h-full ${isFullscreen ? "max-h-none p-8" : "max-h-[calc(100vh-200px)] p-4"} bg-gradient-to-br from-blue-50 to-purple-50 overflow-auto`}
+    >
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className={`${isFullscreen ? "text-4xl" : "text-2xl"} font-bold text-gray-800 mb-2`}>
+          SHAP: The Fair Share Explainer
+        </h2>
+        <p className={`text-gray-600 ${isFullscreen ? "text-xl" : "text-lg"}`}>
+          Like a wise judge, SHAP gives each feature a fair score for its contribution
         </p>
       </div>
-      <DemoTextOverlay text="SHAP & LIME: Uncover AI's 'Why' - Global & Local Insights" isVisible={textVisible} />
-    </div>
-  )
-}
 
-function ChartsDemo({ isPlaying, progress }: DemoComponentProps) {
-  const chartVisible = progress > 10
-  const bars = [
-    { height: 60, delay: 20, color: "bg-cyan-500" },
-    { height: 80, delay: 28, color: "bg-pink-500" },
-    { height: 45, delay: 36, color: "bg-purple-500" },
-    { height: 90, delay: 44, color: "bg-yellow-500" },
-    { height: 70, delay: 52, color: "bg-green-500" },
-  ]
-  const ufoActive = progress > 20
-  const ufoPathProgress = Math.max(0, Math.min(1, (progress - 20) / 65))
-  const textVisible = progress > 50 && progress < 90
-
-  const ufoX = 50 + Math.cos(ufoPathProgress * Math.PI - Math.PI / 2) * 40
-  const ufoY = 20 - Math.sin(ufoPathProgress * Math.PI) * 15
-
-  return (
-    <div className="w-full h-full flex flex-col items-center justify-center text-white font-bold relative">
-      {ufoActive && (
-        <div
-          className="absolute text-7xl animate-ufo-wobble"
-          style={{ left: `${ufoX}%`, top: `${ufoY}%`, transform: "translate(-50%, -50%)" }}
-        >
-          🛸
-          <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-2 h-8 bg-yellow-300/70 rounded-full blur-sm animate-ufo-beam"></div>
-        </div>
-      )}
-
-      <div
-        className={`w-4/5 h-3/5 flex items-end justify-around border-b-4 border-l-4 border-purple-500/50 p-4 relative ${chartVisible ? "opacity-100" : "opacity-0"}`}
-      >
-        {bars.map((bar, i) => (
-          <div key={i} className="w-12 h-full flex items-end mx-1">
+      {/* Comic Speech Bubble */}
+      {comicText && (
+        <div className={`absolute ${isFullscreen ? "top-8 right-8" : "top-4 right-4"} z-30 hidden md:block`}>
+          <div className="relative">
             <div
-              className={`w-full rounded-t-lg ${bar.color} relative transition-all duration-1000 ease-out`}
-              style={{
-                height: isPlaying && progress > bar.delay ? `${bar.height}%` : "0%",
-                boxShadow:
-                  isPlaying && progress > bar.delay
-                    ? `0 0 15px ${bar.color.replace("bg-", "").split("-")[0]}-400`
-                    : "none",
-              }}
+              className={`bg-blue-300 border-4 border-black rounded-2xl ${isFullscreen ? "px-6 py-4" : "px-4 py-2"} shadow-xl animate-bounce-gentle`}
             >
-              <div
-                className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs text-gray-200 opacity-0 transition-opacity duration-500"
-                style={{ opacity: isPlaying && progress > bar.delay + 8 ? 1 : 0 }}
-              >
-                {bar.height}%
+              <span className={`${isFullscreen ? "text-2xl" : "text-xl"} font-black text-black`}>{comicText}</span>
+            </div>
+            <div className="absolute -bottom-3 right-8 w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent border-t-black"></div>
+            <div className="absolute -bottom-2 right-8 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-blue-300"></div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`grid grid-cols-2 gap-${isFullscreen ? "8" : "4"} ${isFullscreen ? "min-h-[600px] max-h-[700px]" : "min-h-[400px] max-h-[500px]"}`}
+      >
+        {/* Left Side - The Courtroom */}
+        <div className={`bg-white rounded-xl ${isFullscreen ? "p-8" : "p-4"} shadow-lg border border-gray-200`}>
+          <h3 className={`${isFullscreen ? "text-2xl" : "text-xl"} font-bold text-gray-800 mb-4 text-center`}>
+            The AI Courtroom
+          </h3>
+
+          {/* Judge Character */}
+          <div className="text-center mb-6">
+            <div className={`${isFullscreen ? "text-8xl" : "text-6xl"} animate-bounce-gentle`}>⚖️</div>
+            <p className={`${isFullscreen ? "text-xl" : "text-lg"} font-bold text-blue-600 mt-2`}>Judge SHAP</p>
+            <p className={`${isFullscreen ? "text-base" : "text-sm"} text-gray-600`}>Ensuring fair decisions</p>
+          </div>
+
+          {/* The Case */}
+          <div className={`bg-gray-50 rounded-lg ${isFullscreen ? "p-6" : "p-3"} mb-4`}>
+            <h4 className={`font-bold text-gray-700 mb-2 ${isFullscreen ? "text-lg" : ""}`}>
+              🏠 The Case: House Price Prediction
+            </h4>
+            <div className={`${isFullscreen ? "text-base" : "text-sm"} text-gray-600 space-y-1`}>
+              <div>📍 Location: Downtown</div>
+              <div>📏 Size: 2,400 sq ft</div>
+              <div>📅 Age: 5 years</div>
+              <div>⭐ Condition: Excellent</div>
+            </div>
+          </div>
+
+          {/* Base Value */}
+          {stage >= 1 && (
+            <div className={`bg-yellow-50 border border-yellow-200 rounded-lg ${isFullscreen ? "p-6" : "p-3"} mb-4`}>
+              <div className="text-center">
+                <div className={`${isFullscreen ? "text-base" : "text-sm"} text-yellow-700`}>
+                  Starting Point (Base Value)
+                </div>
+                <div className={`${isFullscreen ? "text-3xl" : "text-2xl"} font-bold text-yellow-800`}>$350,000</div>
+                <div className={`${isFullscreen ? "text-sm" : "text-xs"} text-yellow-600`}>Average house price</div>
               </div>
-              <div className="absolute top-0 left-0 w-full h-full overflow-hidden rounded-t-lg">
+            </div>
+          )}
+        </div>
+
+        {/* Right Side - The Balancing Scale */}
+        <div className={`bg-white rounded-xl ${isFullscreen ? "p-8" : "p-4"} shadow-lg border border-gray-200`}>
+          <h3 className={`${isFullscreen ? "text-2xl" : "text-xl"} font-bold text-gray-800 mb-4 text-center`}>
+            The Balancing Scale
+          </h3>
+
+          {/* Scale Visualization */}
+          <div className={`relative ${isFullscreen ? "h-64" : "h-48"} flex items-center justify-center`}>
+            {/* Scale Base */}
+            <div className={`absolute bottom-0 ${isFullscreen ? "w-40 h-6" : "w-32 h-4"} bg-gray-600 rounded`}></div>
+            <div
+              className={`absolute ${isFullscreen ? "bottom-6 w-3 h-24" : "bottom-4 w-2 h-20"} left-1/2 transform -translate-x-1/2 bg-gray-600`}
+            ></div>
+
+            {/* Scale Beam */}
+            <div
+              className={`absolute ${isFullscreen ? "w-60 h-3" : "w-48 h-2"} bg-gray-700 rounded transform transition-all duration-1000 ${
+                stage >= 2 ? "rotate-3" : "rotate-0"
+              }`}
+              style={{ top: isFullscreen ? "80px" : "60px" }}
+            >
+              {/* Left Pan (Negative) */}
+              <div
+                className={`absolute ${isFullscreen ? "-left-10 -top-8 w-20 h-16" : "-left-8 -top-6 w-16 h-12"} bg-red-200 border-2 border-red-400 rounded-lg flex items-center justify-center`}
+              >
+                {stage >= 2 && (
+                  <div className="text-center">
+                    <div className={`${isFullscreen ? "text-sm" : "text-xs"} text-red-700 font-bold`}>Age</div>
+                    <div className={`${isFullscreen ? "text-base" : "text-sm"} text-red-800`}>-$15k</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Pan (Positive) */}
+              <div
+                className={`absolute ${isFullscreen ? "-right-10 -top-8 w-20 h-16" : "-right-8 -top-6 w-16 h-12"} bg-green-200 border-2 border-green-400 rounded-lg`}
+              >
+                {stage >= 2 && (
+                  <div className={`text-center ${isFullscreen ? "text-sm" : "text-xs"} space-y-1`}>
+                    <div className="text-green-700 font-bold">Size: +$45k</div>
+                    <div className="text-green-700 font-bold">Location: +$35k</div>
+                    <div className="text-green-700 font-bold">Condition: +$10k</div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Floating Features */}
+            {stage >= 1 && (
+              <>
+                {/* Size Feature */}
+                <div className={`absolute ${isFullscreen ? "top-6 right-12" : "top-4 right-8"} animate-float-slow`}>
+                  <div
+                    className={`bg-green-100 border border-green-300 rounded-lg ${isFullscreen ? "p-3" : "p-2"} text-center`}
+                  >
+                    <div className={`${isFullscreen ? "text-3xl" : "text-2xl"}`}>📏</div>
+                    <div className={`${isFullscreen ? "text-sm" : "text-xs"} font-bold text-green-700`}>Large Size</div>
+                  </div>
+                </div>
+
+                {/* Location Feature */}
                 <div
-                  className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-white/10 animate-chart-shine"
-                  style={{ animationDelay: `${i * 0.1}s` }}
+                  className={`absolute ${isFullscreen ? "top-20 right-20" : "top-16 right-16"} animate-float-slow`}
+                  style={{ animationDelay: "0.5s" }}
+                >
+                  <div
+                    className={`bg-blue-100 border border-blue-300 rounded-lg ${isFullscreen ? "p-3" : "p-2"} text-center`}
+                  >
+                    <div className={`${isFullscreen ? "text-3xl" : "text-2xl"}`}>📍</div>
+                    <div className={`${isFullscreen ? "text-sm" : "text-xs"} font-bold text-blue-700`}>Downtown</div>
+                  </div>
+                </div>
+
+                {/* Age Feature */}
+                <div
+                  className={`absolute ${isFullscreen ? "top-6 left-12" : "top-4 left-8"} animate-float-slow`}
+                  style={{ animationDelay: "1s" }}
+                >
+                  <div
+                    className={`bg-red-100 border border-red-300 rounded-lg ${isFullscreen ? "p-3" : "p-2"} text-center`}
+                  >
+                    <div className={`${isFullscreen ? "text-3xl" : "text-2xl"}`}>📅</div>
+                    <div className={`${isFullscreen ? "text-sm" : "text-xs"} font-bold text-red-700`}>5 Years Old</div>
+                  </div>
+                </div>
+
+                {/* Condition Feature */}
+                <div
+                  className={`absolute ${isFullscreen ? "top-20 left-20" : "top-16 left-16"} animate-float-slow`}
+                  style={{ animationDelay: "1.5s" }}
+                >
+                  <div
+                    className={`bg-purple-100 border border-purple-300 rounded-lg ${isFullscreen ? "p-3" : "p-2"} text-center`}
+                  >
+                    <div className={`${isFullscreen ? "text-3xl" : "text-2xl"}`}>⭐</div>
+                    <div className={`${isFullscreen ? "text-sm" : "text-xs"} font-bold text-purple-700`}>Excellent</div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* SHAP Values */}
+          {stage >= 3 && (
+            <div className="mt-6 space-y-3">
+              <h4 className={`font-bold text-gray-700 text-center ${isFullscreen ? "text-lg" : ""}`}>
+                Fair Share Contributions:
+              </h4>
+              {[
+                { name: "House Size", value: 45000, color: "green" },
+                { name: "Location", value: 35000, color: "blue" },
+                { name: "Condition", value: 10000, color: "purple" },
+                { name: "Age", value: -15000, color: "red" },
+              ].map((feature, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between ${isFullscreen ? "p-3" : "p-2"} bg-gray-50 rounded`}
+                >
+                  <span className={`${isFullscreen ? "text-base" : "text-sm"} font-medium`}>{feature.name}</span>
+                  <span className={`${isFullscreen ? "text-base" : "text-sm"} font-bold text-${feature.color}-600`}>
+                    {feature.value > 0 ? "+" : ""}${(feature.value / 1000).toFixed(0)}k
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Final Verdict */}
+      {stage >= 4 && (
+        <div
+          className={`mt-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl ${isFullscreen ? "p-8" : "p-4"} shadow-lg border border-gray-200`}
+        >
+          <div className="text-center">
+            <h3 className={`${isFullscreen ? "text-2xl" : "text-xl"} font-bold text-gray-800 mb-2`}>⚖️ Final Verdict</h3>
+            <div className={`${isFullscreen ? "text-xl" : "text-lg"} text-gray-700 mb-2`}>
+              Base Value: $350,000 + Contributions: +$75,000 =
+            </div>
+            <div className={`${isFullscreen ? "text-4xl" : "text-2xl"} font-bold text-green-600`}>$425,000</div>
+            <p className={`text-gray-600 mt-2 ${isFullscreen ? "text-lg" : ""}`}>
+              Judge SHAP has fairly distributed credit to each feature based on their true contribution!
+            </p>
+
+            {/* Close Demo Button */}
+            <div className={`mt-6 pt-6 border-t border-gray-200`}>
+              <Button
+                onClick={onClose}
+                className={`bg-blue-500 hover:bg-blue-600 text-white ${isFullscreen ? "px-8 py-3 text-lg" : "px-6 py-2"} rounded-lg font-medium transition-colors`}
+              >
+                Close Demo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// LIME DEMO - The Local Detective
+function LimeDemo({
+  progress,
+  onClose,
+  isFullscreen,
+}: { progress: number; onClose: () => void; isFullscreen?: boolean }) {
+  const [stage, setStage] = useState(0)
+  const [comicText, setComicText] = useState("")
+
+  useEffect(() => {
+    if (progress < 20) {
+      setStage(0)
+      setComicText("Detective on the case!")
+    } else if (progress < 40) {
+      setStage(1)
+      setComicText("Investigating locally!")
+    } else if (progress < 60) {
+      setStage(2)
+      setComicText("Found the clues!")
+    } else if (progress < 80) {
+      setStage(3)
+      setComicText("Case solved!")
+    } else {
+      setStage(4)
+      setComicText("Elementary!")
+    }
+  }, [progress])
+
+  return (
+    <div
+      className={`h-full ${isFullscreen ? "max-h-none p-8" : "max-h-[calc(100vh-200px)] p-4"} bg-gradient-to-br from-orange-50 to-yellow-50 overflow-auto`}
+    >
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className={`${isFullscreen ? "text-4xl" : "text-2xl"} font-bold text-gray-800 mb-2`}>
+          LIME: The Local Detective
+        </h2>
+        <p className={`text-gray-600 ${isFullscreen ? "text-xl" : "text-lg"}`}>
+          Like a detective with a spotlight, LIME focuses on one specific case at a time
+        </p>
+      </div>
+
+      {/* Comic Speech Bubble */}
+      {comicText && (
+        <div className={`absolute ${isFullscreen ? "top-8 right-8" : "top-4 right-4"} z-30 hidden md:block`}>
+          <div className="relative">
+            <div
+              className={`bg-orange-300 border-4 border-black rounded-2xl ${isFullscreen ? "px-6 py-4" : "px-4 py-2"} shadow-xl animate-bounce-gentle`}
+            >
+              <span className={`${isFullscreen ? "text-2xl" : "text-xl"} font-black text-black`}>{comicText}</span>
+            </div>
+            <div className="absolute -bottom-3 right-8 w-0 h-0 border-l-6 border-r-6 border-t-6 border-transparent border-t-black"></div>
+            <div className="absolute -bottom-2 right-8 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-orange-300"></div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={`grid grid-cols-2 gap-${isFullscreen ? "8" : "4"} ${isFullscreen ? "min-h-[600px] max-h-[700px]" : "min-h-[400px] max-h-[500px]"}`}
+      >
+        {/* Left Side - Detective Office */}
+        <div className={`bg-white rounded-xl ${isFullscreen ? "p-8" : "p-4"} shadow-lg border border-gray-200`}>
+          <h3 className={`${isFullscreen ? "text-2xl" : "text-xl"} font-bold text-gray-800 mb-4 text-center`}>
+            Detective LIME's Office
+          </h3>
+
+          {/* Detective Character */}
+          <div className="text-center mb-6">
+            <div className="relative">
+              <div className={`${isFullscreen ? "text-8xl" : "text-6xl"} animate-bounce-gentle`}>🕵️‍♂️</div>
+              <div className={`absolute -top-2 -right-2 ${isFullscreen ? "text-4xl" : "text-3xl"} animate-spin-slow`}>
+                🔦
+              </div>
+            </div>
+            <p className={`${isFullscreen ? "text-xl" : "text-lg"} font-bold text-orange-600 mt-2`}>Detective LIME</p>
+            <p className={`${isFullscreen ? "text-base" : "text-sm"} text-gray-600`}>Local Investigation Expert</p>
+          </div>
+
+          {/* Case File */}
+          <div className={`bg-gray-50 rounded-lg ${isFullscreen ? "p-6" : "p-3"} mb-4`}>
+            <h4 className={`font-bold text-gray-700 mb-2 ${isFullscreen ? "text-lg" : ""}`}>📋 Case File #2024-001</h4>
+            <div className={`${isFullscreen ? "text-base" : "text-sm"} text-gray-600 space-y-1`}>
+              <div>
+                <strong>Subject:</strong> One specific house
+              </div>
+              <div>
+                <strong>Mission:</strong> Why THIS prediction?
+              </div>
+              <div>
+                <strong>Method:</strong> Local neighborhood analysis
+              </div>
+            </div>
+          </div>
+
+          {/* Evidence Board */}
+          {stage >= 1 && (
+            <div className={`bg-yellow-50 border border-yellow-200 rounded-lg ${isFullscreen ? "p-6" : "p-3"}`}>
+              <h4 className={`font-bold text-yellow-700 mb-2 ${isFullscreen ? "text-lg" : ""}`}>🔍 Evidence Board</h4>
+              <div
+                className={`grid grid-cols-2 gap-${isFullscreen ? "4" : "2"} ${isFullscreen ? "text-sm" : "text-xs"}`}
+              >
+                <div className={`bg-white ${isFullscreen ? "p-4" : "p-2"} rounded border`}>
+                  <div className="font-bold">Target House</div>
+                  <div>Size: 2,400 sq ft</div>
+                  <div>Location: Downtown</div>
+                </div>
+                <div className={`bg-white ${isFullscreen ? "p-4" : "p-2"} rounded border`}>
+                  <div className="font-bold">Similar Houses</div>
+                  <div>Found: 50 nearby</div>
+                  <div>Range: $380k-$450k</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Right Side - Investigation Scene */}
+        <div className={`bg-white rounded-xl ${isFullscreen ? "p-8" : "p-4"} shadow-lg border border-gray-200`}>
+          <h3 className={`${isFullscreen ? "text-2xl" : "text-xl"} font-bold text-gray-800 mb-4 text-center`}>
+            The Investigation
+          </h3>
+
+          {/* Spotlight Effect */}
+          <div className={`relative ${isFullscreen ? "h-64" : "h-48"} bg-gray-900 rounded-lg overflow-hidden`}>
+            {/* Dark Background */}
+            <div className="absolute inset-0 bg-gradient-radial from-gray-800 to-gray-900"></div>
+
+            {/* Spotlight */}
+            {stage >= 1 && (
+              <div className="absolute inset-0">
+                <div
+                  className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 ${isFullscreen ? "w-40 h-40" : "w-32 h-32"} bg-gradient-radial from-yellow-200/80 to-transparent rounded-full animate-pulse`}
                 ></div>
               </div>
-            </div>
+            )}
+
+            {/* Target House in Spotlight */}
+            {stage >= 1 && (
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-center">
+                <div className={`${isFullscreen ? "text-6xl" : "text-4xl"} mb-2`}>🏠</div>
+                <div className={`text-white ${isFullscreen ? "text-base" : "text-sm"} font-bold`}>Target House</div>
+                <div className={`text-yellow-200 ${isFullscreen ? "text-sm" : "text-xs"}`}>Under Investigation</div>
+              </div>
+            )}
+
+            {/* Neighboring Houses (Dimmed) */}
+            {stage >= 2 && (
+              <>
+                {[
+                  { x: "20%", y: "30%", emoji: "🏘️" },
+                  { x: "80%", y: "25%", emoji: "🏘️" },
+                  { x: "15%", y: "70%", emoji: "🏘️" },
+                  { x: "85%", y: "75%", emoji: "🏘️" },
+                ].map((house, i) => (
+                  <div
+                    key={i}
+                    className={`absolute ${isFullscreen ? "text-3xl" : "text-2xl"} opacity-40 animate-float-slow`}
+                    style={{
+                      left: house.x,
+                      top: house.y,
+                      animationDelay: `${i * 0.3}s`,
+                    }}
+                  >
+                    {house.emoji}
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Investigation Lines */}
+            {stage >= 2 && (
+              <svg className="absolute inset-0 w-full h-full">
+                <defs>
+                  <linearGradient id="investigationGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#FCD34D" stopOpacity="0.8" />
+                    <stop offset="100%" stopColor="#F59E0B" stopOpacity="0.4" />
+                  </linearGradient>
+                </defs>
+                {[
+                  { x1: "50%", y1: "50%", x2: "20%", y2: "30%" },
+                  { x1: "50%", y1: "50%", x2: "80%", y2: "25%" },
+                  { x1: "50%", y1: "50%", x2: "15%", y2: "70%" },
+                  { x1: "50%", y1: "50%", x2: "85%", y2: "75%" },
+                ].map((line, i) => (
+                  <line
+                    key={i}
+                    x1={line.x1}
+                    y1={line.y1}
+                    x2={line.x2}
+                    y2={line.y2}
+                    stroke="url(#investigationGradient)"
+                    strokeWidth={isFullscreen ? "3" : "2"}
+                    strokeDasharray="5,5"
+                    className="animate-pulse"
+                    style={{ animationDelay: `${i * 0.2}s` }}
+                  />
+                ))}
+              </svg>
+            )}
           </div>
-        ))}
-        <div className="absolute -bottom-8 left-0 text-sm text-gray-400">Feature A</div>
-        <div className="absolute -bottom-8 left-1/4 text-sm text-gray-400">Feature B</div>
-        <div className="absolute -bottom-8 left-1/2 text-sm text-gray-400">Feature C</div>
-        <div className="absolute -bottom-8 left-3/4 text-sm text-gray-400">Feature D</div>
-        <div className="absolute -bottom-8 right-0 text-sm text-gray-400">Feature E</div>
-        <div className="absolute -left-8 top-0 text-sm text-gray-400 transform -rotate-90 origin-bottom-left">
-          Impact
+
+          {/* Investigation Results */}
+          {stage >= 3 && (
+            <div className="mt-6 space-y-3">
+              <h4 className={`font-bold text-gray-700 text-center ${isFullscreen ? "text-lg" : ""}`}>
+                🔍 Local Rules Discovered:
+              </h4>
+              {[
+                { rule: "IF size > 2000 sq ft", impact: "THEN +$45k", confidence: "95%" },
+                { rule: "IF location = Downtown", impact: "THEN +$35k", confidence: "88%" },
+                { rule: "IF age < 10 years", impact: "THEN +$20k", confidence: "92%" },
+              ].map((rule, i) => (
+                <div
+                  key={i}
+                  className={`bg-orange-50 border border-orange-200 rounded ${isFullscreen ? "p-4" : "p-2"}`}
+                >
+                  <div className="flex justify-between items-center">
+                    <div className={`${isFullscreen ? "text-base" : "text-sm"}`}>
+                      <span className="font-medium text-orange-700">{rule.rule}</span>
+                      <br />
+                      <span className="text-orange-600">{rule.impact}</span>
+                    </div>
+                    <div className={`${isFullscreen ? "text-sm" : "text-xs"} text-orange-500 font-bold`}>
+                      {rule.confidence}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      <p className={`mt-10 text-2xl text-cyan-300 ${progress > 70 ? "animate-hologram-appear" : "opacity-0"}`}>
-        Dynamic Feature Analysis
-      </p>
-      <DemoTextOverlay text="Dynamic Visuals: Feature Impact & Model Behavior at a Glance" isVisible={textVisible} />
+
+      {/* Case Closed */}
+      {stage >= 4 && (
+        <div
+          className={`mt-6 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl ${isFullscreen ? "p-8" : "p-4"} shadow-lg border border-gray-200`}
+        >
+          <div className="text-center">
+            <h3 className={`${isFullscreen ? "text-2xl" : "text-xl"} font-bold text-gray-800 mb-2`}>🔦 Case Closed!</h3>
+            <div className={`${isFullscreen ? "text-xl" : "text-lg"} text-gray-700 mb-2`}>
+              Local Prediction for THIS house:
+            </div>
+            <div className={`${isFullscreen ? "text-4xl" : "text-2xl"} font-bold text-orange-600`}>$420,000</div>
+            <div className={`${isFullscreen ? "text-base" : "text-sm"} text-orange-500 mt-1`}>Confidence: 89%</div>
+            <p className={`text-gray-600 mt-2 ${isFullscreen ? "text-lg" : ""}`}>
+              Detective LIME solved this specific case by analyzing the local neighborhood patterns!
+            </p>
+
+            {/* Close Demo Button */}
+            <div className={`mt-6 pt-6 border-t border-gray-200`}>
+              <Button
+                onClick={onClose}
+                className={`bg-orange-500 hover:bg-orange-600 text-white ${isFullscreen ? "px-8 py-3 text-lg" : "px-6 py-2"} rounded-lg font-medium transition-colors`}
+              >
+                Close Demo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-function UserFriendlyDemo({ isPlaying, progress }: DemoComponentProps) {
-  const characters = [
-    { char: "👨‍💼", name: "Analyst", delay: 10 },
-    { char: "👩‍🎓", name: "Student", delay: 22 },
-    { char: "🧑‍💻", name: "Developer", delay: 34 },
-    { char: "🤔", name: "Curious User", delay: 46 },
-  ]
-  const platformVisible = progress > 5
-  const allHappy = progress > 65
-  const confettiActive = progress > 75
-  const textVisible = progress > 50 && progress < 85
+// Keep all other demo functions unchanged...
+// [Previous demo functions remain the same - they don't need fullscreen support since they're not SHAP/LIME specific]
+
+// UPLOAD DEMO - Shows actual file upload process
+function UploadDemo({ progress }: { progress: number }) {
+  const [stage, setStage] = useState(0)
+  const [statusText, setStatusText] = useState("")
+
+  useEffect(() => {
+    if (progress < 20) {
+      setStage(0)
+      setStatusText("Ready to upload datasets")
+    } else if (progress < 40) {
+      setStage(1)
+      setStatusText("Uploading dataset...")
+    } else if (progress < 60) {
+      setStage(2)
+      setStatusText("Validating data format...")
+    } else if (progress < 80) {
+      setStage(3)
+      setStatusText("Analyzing dataset structure...")
+    } else {
+      setStage(4)
+      setStatusText("Dataset ready for analysis!")
+    }
+  }, [progress])
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center text-white font-bold relative overflow-hidden">
-      <div
-        className={`w-3/4 h-1/2 bg-gray-800/50 border-2 border-blue-500 rounded-xl p-4 shadow-2xl relative transition-all duration-500 ${platformVisible ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
-      >
-        <div className="h-6 bg-gray-700 rounded-t-md flex items-center px-2 space-x-1.5">
-          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
-          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-        </div>
-        <div className="p-4 text-center">
-          <h3 className="text-2xl text-blue-300 mb-4">InterWeb-XAI Interface</h3>
-          <div className="flex justify-around items-end h-32">
-            {[20, 40, 60, 30, 50].map((h, i) => (
-              <div
-                key={i}
-                className="w-8 bg-blue-400 rounded-t-sm animate-ui-bars"
-                style={{ height: `${h}%`, animationDelay: `${i * 0.1 + (progress / 100) * 0.5}s` }}
-              ></div>
-            ))}
+    <div className="h-full min-h-[600px] bg-gradient-to-br from-blue-50 to-purple-50 p-6 flex flex-col">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Dataset Upload System</h2>
+        <p className="text-gray-600">Upload datasets of various sizes - we'll handle the AI models</p>
+      </div>
+
+      {/* Main Upload Area */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-full max-w-2xl">
+          {/* Upload Zone */}
+          <div
+            className={`relative border-4 border-dashed rounded-xl p-12 text-center transition-all duration-500 ${
+              stage >= 1 ? "border-blue-500 bg-blue-50 shadow-lg" : "border-gray-300 bg-gray-50 hover:border-gray-400"
+            }`}
+          >
+            {/* Upload Icon */}
+            <div className="mb-6">
+              {stage === 0 && <div className="text-6xl text-gray-400">📁</div>}
+              {stage >= 1 && stage < 4 && <div className="text-6xl text-blue-500 animate-bounce-gentle">⬆️</div>}
+              {stage === 4 && <div className="text-6xl text-green-500 animate-bounce-gentle">✅</div>}
+            </div>
+
+            {/* Status Text */}
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">{statusText}</h3>
+
+            {/* File Types */}
+            {stage === 0 && (
+              <div className="text-gray-600 mb-6">
+                <p>Drag and drop your datasets here or click to browse</p>
+                <p className="text-sm mt-2">Supported: CSV, JSON, Excel, Parquet, TSV</p>
+              </div>
+            )}
+
+            {/* Progress Bar */}
+            {stage >= 1 && (
+              <div className="w-full bg-gray-200 rounded-full h-3 mb-4 overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-300 rounded-full"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
+
+            {/* File Preview */}
+            {stage >= 1 && (
+              <div className="grid grid-cols-2 gap-4 mt-6">
+                {/* Large Dataset */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-2xl">📊</div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800">housing_data.csv</p>
+                      <p className="text-sm text-gray-500">2.3 MB • 15,000 rows</p>
+                      {stage >= 2 && (
+                        <div className="flex items-center mt-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                          <span className="text-xs text-green-600">Validated</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Medium Dataset */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-2xl">📈</div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800">sales_data.json</p>
+                      <p className="text-sm text-gray-500">850 KB • 5,200 records</p>
+                      {stage >= 2 && (
+                        <div className="flex items-center mt-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                          <span className="text-xs text-green-600">Validated</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Small Dataset */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-2xl">📋</div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800">customer_survey.xlsx</p>
+                      <p className="text-sm text-gray-500">125 KB • 800 responses</p>
+                      {stage >= 3 && (
+                        <div className="flex items-center mt-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                          <span className="text-xs text-green-600">Analyzed</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Large Dataset */}
+                <div className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-2xl">🗃️</div>
+                    <div className="text-left">
+                      <p className="font-medium text-gray-800">transaction_log.parquet</p>
+                      <p className="text-sm text-gray-500">12.7 MB • 50,000 entries</p>
+                      {stage >= 3 && (
+                        <div className="flex items-center mt-1">
+                          <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                          <span className="text-xs text-green-600">Analyzed</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Success Message */}
+            {stage === 4 && (
+              <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800 font-medium">
+                  Datasets uploaded successfully! Ready for XAI analysis with built-in models.
+                </p>
+              </div>
+            )}
           </div>
+
+          {/* Upload Button */}
+          {stage === 0 && (
+            <div className="text-center mt-6">
+              <button className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-3 rounded-lg font-medium transition-colors">
+                Choose Files
+              </button>
+            </div>
+          )}
         </div>
-        <div
-          className="absolute text-4xl animate-comic-cursor"
-          style={{ left: `${10 + (progress / 100) * 70}%`, top: `${20 + Math.sin(progress / 10) * 10}%` }}
-        >
-          👆
+      </div>
+    </div>
+  )
+}
+
+// EXPLANATIONS DEMO - Shows SHAP and LIME in action
+function ExplanationsDemo({ progress }: { progress: number }) {
+  const [stage, setStage] = useState(0)
+
+  useEffect(() => {
+    if (progress < 25) setStage(0)
+    else if (progress < 50) setStage(1)
+    else if (progress < 75) setStage(2)
+    else setStage(3)
+  }, [progress])
+
+  return (
+    <div className="h-full min-h-[600px] bg-gradient-to-br from-green-50 to-blue-50 p-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">AI Explanation Methods</h2>
+        <p className="text-gray-600">Understanding how AI makes decisions with SHAP and LIME</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-8 h-full">
+        {/* SHAP Section */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+              S
+            </div>
+            <h3 className="text-xl font-bold text-gray-800">SHAP Analysis</h3>
+          </div>
+
+          <p className="text-gray-600 text-sm mb-4">Shows how each feature contributes to the prediction globally</p>
+
+          {/* SHAP Visualization */}
+          {stage >= 1 && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-700">Feature Importance:</h4>
+              {[
+                { name: "House Size", value: 0.35, color: "bg-green-500" },
+                { name: "Location", value: 0.25, color: "bg-blue-500" },
+                { name: "Age", value: -0.15, color: "bg-red-500" },
+                { name: "Condition", value: 0.2, color: "bg-purple-500" },
+              ].map((feature, i) => (
+                <div key={i} className="flex items-center space-x-3">
+                  <span className="text-sm w-20 text-gray-700">{feature.name}</span>
+                  <div className="flex-1 bg-gray-200 rounded-full h-4 overflow-hidden">
+                    <div
+                      className={`h-full ${feature.color} transition-all duration-1000 flex items-center justify-end pr-2`}
+                      style={{
+                        width: `${Math.abs(feature.value) * 100}%`,
+                        animationDelay: `${i * 0.2}s`,
+                      }}
+                    >
+                      <span className="text-xs text-white font-medium">
+                        {feature.value > 0 ? "+" : ""}
+                        {feature.value.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {stage >= 2 && (
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>Prediction:</strong> $425,000 (15% above base value)
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* LIME Section */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <div className="flex items-center space-x-3 mb-4">
+            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
+              L
+            </div>
+            <h3 className="text-xl font-bold text-gray-800">LIME Analysis</h3>
+          </div>
+
+          <p className="text-gray-600 text-sm mb-4">Explains individual predictions by analyzing local neighborhoods</p>
+
+          {/* LIME Visualization */}
+          {stage >= 2 && (
+            <div className="space-y-4">
+              <h4 className="font-medium text-gray-700">Local Explanation for this house:</h4>
+
+              {/* Sample Data Point */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>Size: 2,400 sq ft</div>
+                  <div>Location: Downtown</div>
+                  <div>Age: 5 years</div>
+                  <div>Condition: Excellent</div>
+                </div>
+              </div>
+
+              {/* LIME Rules */}
+              <div className="space-y-2">
+                {[
+                  { rule: "IF size > 2000 sq ft", impact: "+$45k", color: "text-green-600" },
+                  { rule: "IF location = Downtown", impact: "+$35k", color: "text-green-600" },
+                  { rule: "IF age < 10 years", impact: "+$20k", color: "text-green-600" },
+                ].map((rule, i) => (
+                  <div
+                    key={i}
+                    className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                    style={{ animationDelay: `${i * 0.3}s` }}
+                  >
+                    <span className="text-sm text-gray-700">{rule.rule}</span>
+                    <span className={`text-sm font-medium ${rule.color}`}>{rule.impact}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {stage >= 3 && (
+            <div className="mt-4 p-3 bg-orange-50 rounded-lg">
+              <p className="text-sm text-orange-800">
+                <strong>Local Prediction:</strong> $420,000 (High confidence: 89%)
+              </p>
+            </div>
+          )}
         </div>
       </div>
 
-      <div className="flex space-x-8 mt-10">
-        {characters.map((user, i) => (
+      {/* Comparison */}
+      {stage >= 3 && (
+        <div className="mt-6 bg-white rounded-xl p-4 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-2">Key Differences:</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <strong className="text-blue-600">SHAP:</strong> Global model behavior, all features ranked
+            </div>
+            <div>
+              <strong className="text-orange-600">LIME:</strong> Local explanation, specific instance rules
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// CHARTS DEMO - Shows actual data visualization
+function ChartsDemo({ progress }: { progress: number }) {
+  const [stage, setStage] = useState(0)
+
+  useEffect(() => {
+    if (progress < 33) setStage(0)
+    else if (progress < 66) setStage(1)
+    else setStage(2)
+  }, [progress])
+
+  return (
+    <div className="h-full min-h-[600px] bg-gradient-to-br from-purple-50 to-pink-50 p-6">
+      {/* Header */}
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Interactive Visualizations</h2>
+        <p className="text-gray-600">Dynamic charts powered by Plotly.js for better understanding</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-6 h-[calc(100%-120px)]">
+        {/* Feature Importance Bar Chart */}
+        <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-3 text-center">Feature Importance</h3>
+          <div className="h-48 flex items-end justify-around space-x-2">
+            {[
+              { name: "Size", value: 85, color: "bg-blue-500" },
+              { name: "Location", value: 70, color: "bg-green-500" },
+              { name: "Age", value: 45, color: "bg-yellow-500" },
+              { name: "Condition", value: 60, color: "bg-purple-500" },
+              { name: "Garage", value: 30, color: "bg-red-500" },
+            ].map((item, i) => (
+              <div key={i} className="flex flex-col items-center flex-1">
+                <div
+                  className={`${item.color} rounded-t transition-all duration-1000 w-full flex items-end justify-center pb-1`}
+                  style={{
+                    height: stage >= 1 ? `${item.value}%` : "0%",
+                    animationDelay: `${i * 0.2}s`,
+                  }}
+                >
+                  {stage >= 1 && <span className="text-xs text-white font-medium">{item.value}%</span>}
+                </div>
+                <span className="text-xs text-gray-600 mt-1 text-center">{item.name}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* SHAP Force Plot */}
+        <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-3 text-center">SHAP Force Plot</h3>
+          {stage >= 1 && (
+            <div className="space-y-4">
+              {/* Base Value */}
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Base Value</div>
+                <div className="text-lg font-bold text-gray-800">$350,000</div>
+              </div>
+
+              {/* Force Plot Visualization */}
+              <div className="relative h-32 bg-gradient-to-r from-red-200 via-gray-100 to-green-200 rounded-lg overflow-hidden">
+                {/* Prediction Line */}
+                <div className="absolute top-1/2 left-1/2 w-1 h-full bg-black transform -translate-x-1/2"></div>
+
+                {/* Feature Contributions */}
+                {[
+                  { name: "Size", value: 45, side: "right", color: "bg-green-500" },
+                  { name: "Location", value: 30, side: "right", color: "bg-blue-500" },
+                  { name: "Age", value: -20, side: "left", color: "bg-red-500" },
+                ].map((feature, i) => (
+                  <div
+                    key={i}
+                    className={`absolute top-1/2 ${feature.side === "right" ? "left-1/2" : "right-1/2"} ${
+                      feature.color
+                    } h-6 flex items-center justify-center text-xs text-white font-medium transform -translate-y-1/2 transition-all duration-1000`}
+                    style={{
+                      width: `${Math.abs(feature.value)}px`,
+                      animationDelay: `${i * 0.3}s`,
+                    }}
+                  >
+                    {feature.name}
+                  </div>
+                ))}
+              </div>
+
+              {/* Final Prediction */}
+              <div className="text-center">
+                <div className="text-sm text-gray-600">Final Prediction</div>
+                <div className="text-lg font-bold text-green-600">$405,000</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Summary Plot */}
+        <div className="bg-white rounded-xl p-4 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-3 text-center">Summary Plot</h3>
+          {stage >= 2 && (
+            <div className="space-y-3">
+              {[
+                { feature: "House Size", points: 12, color: "bg-blue-500" },
+                { feature: "Location", points: 10, color: "bg-green-500" },
+                { feature: "Age", points: 8, color: "bg-yellow-500" },
+                { feature: "Condition", points: 6, color: "bg-purple-500" },
+                { feature: "Garage", points: 4, color: "bg-red-500" },
+              ].map((item, i) => (
+                <div key={i} className="flex items-center space-x-3">
+                  <span className="text-sm w-20 text-gray-700">{item.feature}</span>
+                  <div className="flex-1 flex items-center space-x-1">
+                    {[...Array(item.points)].map((_, j) => (
+                      <div
+                        key={j}
+                        className={`w-2 h-2 ${item.color} rounded-full transition-all duration-300`}
+                        style={{
+                          animationDelay: `${i * 0.2 + j * 0.1}s`,
+                          opacity: stage >= 2 ? 1 : 0,
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Interactive Features */}
+      {stage >= 2 && (
+        <div className="mt-6 bg-white rounded-xl p-4 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-2">Interactive Features:</h3>
+          <div className="grid grid-cols-3 gap-4 text-sm text-gray-600">
+            <div>🖱️ Hover for detailed values</div>
+            <div>🔍 Zoom and pan capabilities</div>
+            <div>📊 Export charts as images</div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// USER-FRIENDLY DEMO - Shows the actual workflow
+function UserFriendlyDemo({ progress }: { progress: number }) {
+  const [currentStep, setCurrentStep] = useState(0)
+
+  useEffect(() => {
+    if (progress < 25) setCurrentStep(0)
+    else if (progress < 50) setCurrentStep(1)
+    else if (progress < 75) setCurrentStep(2)
+    else setCurrentStep(3)
+  }, [progress])
+
+  const steps = [
+    {
+      title: "Upload Your Data",
+      description: "Simply drag and drop your dataset and model files",
+      icon: "📁",
+      details: ["Support for CSV, JSON, Excel", "Pre-trained models (.pkl, .h5)", "Automatic validation"],
+    },
+    {
+      title: "Select Analysis Type",
+      description: "Choose between SHAP, LIME, or both for explanations",
+      icon: "🎯",
+      details: ["Global explanations with SHAP", "Local explanations with LIME", "Comparison mode available"],
+    },
+    {
+      title: "Configure Settings",
+      description: "Customize the analysis parameters easily",
+      icon: "⚙️",
+      details: ["Select target features", "Set explanation depth", "Choose visualization style"],
+    },
+    {
+      title: "View Results",
+      description: "Interactive charts and clear explanations",
+      icon: "📊",
+      details: ["Interactive visualizations", "Downloadable reports", "Share with your team"],
+    },
+  ]
+
+  return (
+    <div className="h-full min-h-[600px] bg-gradient-to-br from-blue-50 to-green-50 p-6">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">User-Friendly Workflow</h2>
+        <p className="text-gray-600">Designed for users of all technical backgrounds</p>
+      </div>
+
+      {/* Progress Steps */}
+      <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center space-x-4">
+          {steps.map((step, i) => (
+            <div key={i} className="flex items-center">
+              {/* Step Circle */}
+              <div
+                className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all duration-500 ${
+                  i <= currentStep ? "bg-blue-500 text-white shadow-lg scale-110" : "bg-gray-200 text-gray-500"
+                }`}
+              >
+                {i < currentStep ? "✓" : i + 1}
+              </div>
+
+              {/* Connector Line */}
+              {i < steps.length - 1 && (
+                <div
+                  className={`w-16 h-1 mx-2 transition-all duration-500 ${
+                    i < currentStep ? "bg-blue-500" : "bg-gray-200"
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Current Step Details */}
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-200">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-4">{steps[currentStep].icon}</div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">{steps[currentStep].title}</h3>
+            <p className="text-gray-600 text-lg">{steps[currentStep].description}</p>
+          </div>
+
+          {/* Step Details */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {steps[currentStep].details.map((detail, i) => (
+              <div
+                key={i}
+                className="bg-blue-50 rounded-lg p-4 text-center transition-all duration-500"
+                style={{ animationDelay: `${i * 0.2}s` }}
+              >
+                <div className="text-blue-600 font-medium">{detail}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Mock Interface Preview */}
+          <div className="mt-8 bg-gray-50 rounded-lg p-6">
+            <h4 className="font-bold text-gray-800 mb-4">Interface Preview:</h4>
+            <div className="bg-white rounded border border-gray-200 p-4">
+              {currentStep === 0 && (
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded">
+                  <div className="text-4xl mb-2">📁</div>
+                  <p className="text-gray-600">Drag files here or click to browse</p>
+                </div>
+              )}
+              {currentStep === 1 && (
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-3">
+                    <input type="radio" checked readOnly />
+                    <label className="text-gray-700">SHAP Analysis (Global explanations)</label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <input type="radio" />
+                    <label className="text-gray-700">LIME Analysis (Local explanations)</label>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <input type="radio" />
+                    <label className="text-gray-700">Both SHAP and LIME</label>
+                  </div>
+                </div>
+              )}
+              {currentStep === 2 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Feature</label>
+                    <select className="w-full border border-gray-300 rounded px-3 py-2">
+                      <option>House Price</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Number of Features</label>
+                    <input type="range" className="w-full" min="5" max="20" defaultValue="10" />
+                  </div>
+                </div>
+              )}
+              {currentStep === 3 && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-blue-50 rounded p-3 text-center">
+                    <div className="text-2xl mb-1">📊</div>
+                    <p className="text-sm text-blue-800">Interactive Charts</p>
+                  </div>
+                  <div className="bg-green-50 rounded p-3 text-center">
+                    <div className="text-2xl mb-1">📋</div>
+                    <p className="text-sm text-green-800">Detailed Report</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// RELIABILITY DEMO - Shows trust metrics and validation
+function ReliabilityDemo({ progress }: { progress: number }) {
+  const [stage, setStage] = useState(0)
+
+  useEffect(() => {
+    if (progress < 33) setStage(0)
+    else if (progress < 66) setStage(1)
+    else setStage(2)
+  }, [progress])
+
+  const reliabilityScore = Math.min(95, Math.floor(progress))
+
+  return (
+    <div className="h-full min-h-[600px] bg-gradient-to-br from-green-50 to-teal-50 p-6">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Reliability Assessment</h2>
+        <p className="text-gray-600">Ensuring trustworthy AI explanations through validation</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-6 h-[calc(100%-120px)]">
+        {/* Stability Analysis */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-4 flex items-center">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm mr-3">
+              1
+            </div>
+            Stability Analysis
+          </h3>
+
+          {stage >= 0 && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">Testing explanation consistency across data perturbations</p>
+
+              {/* Stability Tests */}
+              <div className="space-y-3">
+                {[
+                  { test: "Feature Permutation", score: 92, status: "passed" },
+                  { test: "Noise Injection", score: 88, status: "passed" },
+                  { test: "Sample Variation", score: 94, status: "passed" },
+                ].map((test, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{test.test}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-16 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-green-500 transition-all duration-1000"
+                          style={{
+                            width: `${test.score}%`,
+                            animationDelay: `${i * 0.3}s`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-xs text-green-600 font-medium">{test.score}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Consistency Checks */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-4 flex items-center">
+            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-sm mr-3">
+              2
+            </div>
+            Consistency Checks
+          </h3>
+
+          {stage >= 1 && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">Comparing SHAP and LIME explanations for agreement</p>
+
+              {/* Consistency Metrics */}
+              <div className="space-y-3">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Feature Ranking Agreement</span>
+                    <span className="text-sm text-green-600 font-bold">87%</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: "87%" }} />
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Direction Agreement</span>
+                    <span className="text-sm text-green-600 font-bold">93%</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: "93%" }} />
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm font-medium text-gray-700">Magnitude Correlation</span>
+                    <span className="text-sm text-green-600 font-bold">81%</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: "81%" }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Overall Trust Score */}
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-4 flex items-center">
+            <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm mr-3">
+              3
+            </div>
+            Trust Score
+          </h3>
+
+          {stage >= 2 && (
+            <div className="text-center space-y-4">
+              {/* Circular Progress */}
+              <div className="relative w-32 h-32 mx-auto">
+                <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    className="text-gray-200"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray={`${2 * Math.PI * 40}`}
+                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - reliabilityScore / 100)}`}
+                    className="text-green-500 transition-all duration-2000"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-gray-800">{reliabilityScore}%</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="font-bold text-green-600 text-lg">Highly Reliable</p>
+                <p className="text-sm text-gray-600">
+                  Explanations show strong consistency and stability across multiple validation tests.
+                </p>
+              </div>
+
+              {/* Trust Indicators */}
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="bg-green-50 rounded-lg p-2 text-center">
+                  <div className="text-lg">✅</div>
+                  <p className="text-xs text-green-800">Stable</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-2 text-center">
+                  <div className="text-lg">🔒</div>
+                  <p className="text-xs text-green-800">Consistent</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-2 text-center">
+                  <div className="text-lg">🎯</div>
+                  <p className="text-xs text-green-800">Accurate</p>
+                </div>
+                <div className="bg-green-50 rounded-lg p-2 text-center">
+                  <div className="text-lg">🛡️</div>
+                  <p className="text-xs text-green-800">Robust</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Summary */}
+      {stage >= 2 && (
+        <div className="mt-6 bg-white rounded-xl p-4 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-2">Reliability Summary:</h3>
+          <p className="text-gray-600 text-sm">
+            The AI explanations demonstrate high reliability with consistent results across multiple validation methods.
+            You can trust these insights for decision-making.
+          </p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// COMPARE DEMO - Shows actual model comparison
+function CompareDemo({ progress }: { progress: number }) {
+  const [stage, setStage] = useState(0)
+
+  useEffect(() => {
+    if (progress < 25) setStage(0)
+    else if (progress < 50) setStage(1)
+    else if (progress < 75) setStage(2)
+    else setStage(3)
+  }, [progress])
+
+  const models = [
+    {
+      name: "Random Forest",
+      accuracy: 87.5,
+      precision: 89.2,
+      recall: 85.8,
+      features: ["House Size", "Location", "Age", "Condition"],
+      color: "blue",
+    },
+    {
+      name: "Neural Network",
+      accuracy: 91.3,
+      precision: 92.1,
+      recall: 90.5,
+      features: ["House Size", "Location", "Neighborhood", "Market Trends"],
+      color: "purple",
+    },
+  ]
+
+  return (
+    <div className="h-full min-h-[600px] bg-gradient-to-br from-indigo-50 to-purple-50 p-6">
+      {/* Header */}
+      <div className="text-center mb-8">
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">Model Comparison</h2>
+        <p className="text-gray-600">Compare multiple AI models side by side</p>
+      </div>
+
+      {/* Model Cards */}
+      <div className="grid grid-cols-2 gap-8 mb-6 h-[calc(50%-60px)]">
+        {models.map((model, i) => (
           <div
             key={i}
-            className={`text-center transition-all duration-500 ${progress > user.delay ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
+            className={`bg-white rounded-xl p-6 shadow-lg border-2 transition-all duration-500 ${
+              stage >= 1 ? `border-${model.color}-500 shadow-${model.color}-500/20` : "border-gray-200"
+            }`}
           >
-            <div className={`text-7xl mb-2 ${isPlaying && allHappy ? "animate-user-bounce" : ""}`}>
-              {allHappy ? "🥳" : user.char}
+            <div className="text-center mb-4">
+              <h3 className={`text-xl font-bold text-${model.color}-600`}>{model.name}</h3>
+              <div className="text-4xl mt-2">{i === 0 ? "🌳" : "🧠"}</div>
             </div>
-            <p className="text-sm text-gray-300">{user.name}</p>
-            {isPlaying && progress > user.delay + 8 && progress < 80 && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-white text-black text-xs px-2 py-0.5 rounded-full shadow-md animate-speech-bubble">
-                {progress < 25 ? "Hmm..." : progress < 40 ? "Easy!" : progress < 60 ? "Cool!" : "Love it!"}
+
+            {/* Performance Metrics */}
+            {stage >= 1 && (
+              <div className="space-y-3">
+                <h4 className="font-medium text-gray-700">Performance Metrics:</h4>
+                {[
+                  { metric: "Accuracy", value: model.accuracy },
+                  { metric: "Precision", value: model.precision },
+                  { metric: "Recall", value: model.recall },
+                ].map((metric, j) => (
+                  <div key={j} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">{metric.metric}</span>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full bg-${model.color}-500 transition-all duration-1000`}
+                          style={{
+                            width: `${metric.value}%`,
+                            animationDelay: `${j * 0.2}s`,
+                          }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium text-gray-800">{metric.value}%</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Top Features */}
+            {stage >= 2 && (
+              <div className="mt-4">
+                <h4 className="font-medium text-gray-700 mb-2">Top Features:</h4>
+                <div className="space-y-1">
+                  {model.features.map((feature, j) => (
+                    <div
+                      key={j}
+                      className={`text-sm bg-${model.color}-50 text-${model.color}-800 px-2 py-1 rounded transition-all duration-500`}
+                      style={{ animationDelay: `${j * 0.1}s` }}
+                    >
+                      {j + 1}. {feature}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         ))}
       </div>
 
-      {confettiActive &&
-        [...Array(40)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute top-0 w-2 h-3 rounded-sm animate-confetti-fall"
-            style={{
-              left: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 1}s`,
-              animationDuration: `${1 + Math.random() * 1}s`,
-              background: `hsl(${Math.random() * 360}, 70%, 60%)`,
-            }}
-          />
-        ))}
-      {allHappy && <div className="mt-6 text-3xl text-yellow-400 animate-hologram-appear">Accessible to Everyone!</div>}
-      <DemoTextOverlay text="XAI for Everyone: Intuitive Workflow, Clear Results" isVisible={textVisible} />
-    </div>
-  )
-}
+      {/* Comparison Results */}
+      {stage >= 3 && (
+        <div className="bg-white rounded-xl p-6 shadow-lg border border-gray-200">
+          <h3 className="font-bold text-gray-800 mb-4 text-center">Comparison Results</h3>
 
-function ReliabilityDemo({ isPlaying, progress }: DemoComponentProps) {
-  const shieldActive = progress > 10
-  const ringsActive = progress > 20
-  const score = Math.min(100, Math.floor((progress / 85) * 97))
-  const scoreVisible = progress > 55
-  const checkmarkVisible = progress > 80
-  const textVisible = progress > 60 && progress < 90
+          <div className="grid grid-cols-3 gap-6">
+            {/* Winner */}
+            <div className="text-center">
+              <div className="text-4xl mb-2">🏆</div>
+              <h4 className="font-bold text-purple-600">Best Overall</h4>
+              <p className="text-lg font-medium text-gray-800">Neural Network</p>
+              <p className="text-sm text-gray-600">Higher accuracy and precision</p>
+            </div>
 
-  return (
-    <div className="w-full h-full flex items-center justify-center text-white font-bold relative">
-      <div
-        className={`relative w-72 h-72 transition-opacity duration-500 ${shieldActive ? "opacity-100" : "opacity-0"}`}
-      >
-        {ringsActive &&
-          [0, 1, 2].map((i) => (
-            <div
-              key={i}
-              className="absolute inset-0 rounded-full border-2 border-green-400 animate-reliability-ring"
-              style={{ animationDelay: `${i * 0.5}s` }}
-            ></div>
-          ))}
+            {/* Feature Comparison */}
+            <div className="text-center">
+              <div className="text-4xl mb-2">🔍</div>
+              <h4 className="font-bold text-blue-600">Feature Analysis</h4>
+              <p className="text-sm text-gray-600">
+                Both models agree on <strong>House Size</strong> and <strong>Location</strong> as top features
+              </p>
+            </div>
 
-        <div
-          className={`absolute inset-0 flex items-center justify-center text-8xl ${isPlaying ? "animate-shield-strong-pulse" : ""}`}
-        >
-          <ShieldCheck className="w-56 h-56 text-green-500 opacity-80" />
+            {/* Recommendation */}
+            <div className="text-center">
+              <div className="text-4xl mb-2">💡</div>
+              <h4 className="font-bold text-green-600">Recommendation</h4>
+              <p className="text-sm text-gray-600">
+                Use <strong>Neural Network</strong> for production with Random Forest as backup
+              </p>
+            </div>
+          </div>
+
+          {/* Detailed Comparison Table */}
+          <div className="mt-6 overflow-hidden rounded-lg border border-gray-200">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Metric</th>
+                  <th className="px-4 py-2 text-center text-sm font-medium text-blue-700">Random Forest</th>
+                  <th className="px-4 py-2 text-center text-sm font-medium text-purple-700">Neural Network</th>
+                  <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">Winner</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {[
+                  { metric: "Accuracy", rf: "87.5%", nn: "91.3%", winner: "NN" },
+                  { metric: "Training Time", rf: "2 min", nn: "15 min", winner: "RF" },
+                  { metric: "Interpretability", rf: "High", nn: "Medium", winner: "RF" },
+                  { metric: "Scalability", rf: "Good", nn: "Excellent", winner: "NN" },
+                ].map((row, i) => (
+                  <tr key={i} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 text-sm text-gray-800">{row.metric}</td>
+                    <td className="px-4 py-2 text-sm text-center text-blue-600">{row.rf}</td>
+                    <td className="px-4 py-2 text-sm text-center text-purple-600">{row.nn}</td>
+                    <td className="px-4 py-2 text-sm text-center">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          row.winner === "NN" ? "bg-purple-100 text-purple-800" : "bg-blue-100 text-blue-800"
+                        }`}
+                      >
+                        {row.winner === "NN" ? "Neural Network" : "Random Forest"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-
-        <div
-          className="absolute inset-10 grid grid-cols-3 gap-1 opacity-0"
-          style={{ animation: isPlaying && progress > 30 ? "hex-grid-appear 1s forwards" : "none" }}
-        >
-          {[...Array(9)].map((_, i) => (
-            <div
-              key={i}
-              className="w-full aspect-square bg-green-500/30 hex-shape animate-hex-pulse"
-              style={{ animationDelay: `${i * 0.1 + (progress / 100) * 0.3}s` }}
-            ></div>
-          ))}
-        </div>
-
-        <div
-          className={`absolute inset-0 flex flex-col items-center justify-center text-6xl text-white transition-all duration-500 ${scoreVisible ? "opacity-100 scale-100" : "opacity-0 scale-50"}`}
-        >
-          <span>{score}%</span>
-          <span className="text-2xl text-green-300 mt-2">Reliability Score</span>
-        </div>
-
-        {checkmarkVisible && (
-          <div className="absolute bottom-5 right-5 text-5xl text-yellow-400 animate-checkmark-pop">✔️</div>
-        )}
-      </div>
-      {progress > 85 && (
-        <p className="absolute bottom-10 text-2xl text-green-200 animate-hologram-appear">
-          Trustworthy Insights Assured
-        </p>
       )}
-      <DemoTextOverlay text="Trustworthy AI: Stability Analysis & Consistency Checks" isVisible={textVisible} />
-    </div>
-  )
-}
-
-function CompareDemo({ isPlaying, progress }: DemoComponentProps) {
-  const robotsAppear = progress > 10
-  const vsAppears = progress > 20
-  const battleStarts = progress > 35
-  const modelAWins = progress > 70
-  const textVisible = progress > 50 && progress < 85
-
-  return (
-    <div className="w-full h-full flex items-center justify-around text-white font-bold relative overflow-hidden">
-      <div
-        className={`text-center transition-all duration-500 ${robotsAppear ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-20"}`}
-      >
-        <div className={`text-8xl ${isPlaying ? "animate-robot-a-active" : ""}`}>🤖</div>
-        <p className="text-xl text-blue-400 mt-2">Model Alpha</p>
-        <p
-          className={`text-3xl text-blue-300 ${battleStarts ? "animate-score-update" : "opacity-0"}`}
-          style={{ animationDelay: "0.5s" }}
-        >
-          {modelAWins ? "92%" : "85%"}
-        </p>
-        {battleStarts && !modelAWins && progress < 70 && (
-          <div
-            className="absolute w-3 h-3 rounded-full bg-red-500 animate-hit-effect"
-            style={{ left: "28%", top: "45%", animationDelay: `${Math.random() * 0.3}s` }}
-          ></div>
-        )}
-      </div>
-
-      <div
-        className={`text-8xl font-black text-yellow-400 transition-all duration-300 ${vsAppears ? "opacity-100 scale-100" : "opacity-0 scale-0"}`}
-      >
-        <span className={`${isPlaying && battleStarts ? "animate-vs-battle" : ""}`}>VS</span>
-      </div>
-
-      <div
-        className={`text-center transition-all duration-500 ${robotsAppear ? "opacity-100 translate-x-0" : "opacity-0 translate-x-20"}`}
-      >
-        <div className={`text-8xl ${isPlaying ? "animate-robot-b-active" : ""}`}>🦾</div>
-        <p className="text-xl text-purple-400 mt-2">Model Beta</p>
-        <p
-          className={`text-3xl text-purple-300 ${battleStarts ? "animate-score-update" : "opacity-0"}`}
-          style={{ animationDelay: "0.7s" }}
-        >
-          {modelAWins ? "88%" : "90%"}
-        </p>
-        {battleStarts && modelAWins && progress < 70 && (
-          <div
-            className="absolute w-3 h-3 rounded-full bg-red-500 animate-hit-effect"
-            style={{ right: "28%", top: "45%", animationDelay: `${Math.random() * 0.3 + 0.1}s` }}
-          ></div>
-        )}
-      </div>
-
-      {battleStarts && progress < 70 && (
-        <>
-          <div
-            className="absolute w-1 h-full bg-blue-500/50 animate-laser-fire-a"
-            style={{ clipPath: "polygon(0 0, 100% 20%, 100% 80%, 0% 100%)" }}
-          ></div>
-          <div
-            className="absolute w-1 h-full bg-purple-500/50 animate-laser-fire-b"
-            style={{ clipPath: "polygon(100% 0, 0 20%, 0 80%, 100% 100%)" }}
-          ></div>
-        </>
-      )}
-
-      <div
-        className={`absolute bottom-10 text-center w-full transition-all duration-500 ${modelAWins ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10"}`}
-      >
-        <p className="text-5xl bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent font-black animate-winner-text-glow">
-          MODEL ALPHA WINS!
-        </p>
-        <p className="text-xl text-blue-200 mt-2">Superior Accuracy & Efficiency!</p>
-        {[...Array(5)].map((_, i) => (
-          <Sparkles
-            key={i}
-            className="inline-block text-yellow-400 animate-winner-sparkle"
-            style={{ width: `${20 + i * 5}px`, height: `${20 + i * 5}px`, animationDelay: `${i * 0.1}s` }}
-          />
-        ))}
-      </div>
-      <DemoTextOverlay text="Model Showdown: Compare Explanations, Choose with Confidence" isVisible={textVisible} />
     </div>
   )
 }

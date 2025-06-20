@@ -17,6 +17,8 @@ export function VideoModal({ isOpen, onClose, videoSrc, title, description }: Vi
   const [isPlaying, setIsPlaying] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
 
+  const validSrc = videoSrc && videoSrc.trim().length > 0
+
   const togglePlay = () => {
     const video = document.getElementById("demo-video") as HTMLVideoElement
     if (video) {
@@ -54,25 +56,18 @@ export function VideoModal({ isOpen, onClose, videoSrc, title, description }: Vi
 
         <div className="relative group">
           {/* Video Player */}
-          <video
-            id="demo-video"
-            className="w-full h-auto rounded-lg shadow-2xl"
-            poster="/placeholder.svg?height=400&width=800&text=Demo+Video+Thumbnail"
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
-            onEnded={() => setIsPlaying(false)}
-          >
-            <source src={videoSrc} type="video/mp4" />
-            <div className="bg-gradient-to-br from-orange-100 to-pink-100 p-8 rounded-lg text-center">
-              <div className="w-24 h-24 bg-gradient-to-r from-orange-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Play className="h-12 w-12 text-white ml-1" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">Demo Video Coming Soon!</h3>
-              <p className="text-gray-600">
-                We are creating amazing demo videos to showcase this feature. Stay tuned for interactive demonstrations!
-              </p>
-            </div>
-          </video>
+          {validSrc && (
+            <video
+              id="demo-video"
+              className="w-full h-auto rounded-lg shadow-2xl"
+              poster="/placeholder.svg?height=400&width=800&text=Demo+Video+Thumbnail"
+              onPlay={() => setIsPlaying(true)}
+              onPause={() => setIsPlaying(false)}
+              onEnded={() => setIsPlaying(false)}
+            >
+              {validSrc && <source src={videoSrc} type="video/mp4" />}
+            </video>
+          )}
 
           {/* Video Controls Overlay */}
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
