@@ -464,17 +464,17 @@ export default function ExplorePage() {
                       <SelectValue placeholder="Select a model" />
                     </SelectTrigger>
                     <SelectContent className="bg-white border-purple-200">
-                      <SelectItem value="random-forest" className="text-gray-800 hover:bg-purple-50">
+                      <SelectItem value="random_forest" className="text-gray-800 hover:bg-purple-50">
                         Random Forest Classifier
                       </SelectItem>
-                      <SelectItem value="logistic-regression" className="text-gray-800 hover:bg-purple-50">
+                      <SelectItem value="logistic_regression" className="text-gray-800 hover:bg-purple-50">
                         Logistic Regression
                       </SelectItem>
-                      <SelectItem value="gradient-boosting" className="text-gray-800 hover:bg-purple-50">
-                        Gradient Boosting
+                      <SelectItem value="naive_bayes" className="text-gray-800 hover:bg-purple-50">
+                        Naive Bayes
                       </SelectItem>
-                      <SelectItem value="neural-network" className="text-gray-800 hover:bg-purple-50">
-                        Neural Network
+                      <SelectItem value="decision_tree" className="text-gray-800 hover:bg-purple-50">
+                        Decision Tree
                       </SelectItem>
                     </SelectContent>
                   </Select>
