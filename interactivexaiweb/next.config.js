@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  experimental: {
+    serverComponentsExternalPackages: [],
+  },
+  transpilePackages: ["recharts"],
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,4 +15,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+module.exports = nextConfig

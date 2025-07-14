@@ -113,7 +113,7 @@ export function VideoModal({ isOpen, onClose, videoSrc, title, description }: Vi
         {/* Demo Features List */}
         <div className="grid md:grid-cols-2 gap-4 mt-6 pt-4 border-t border-orange-200/20">
           <div>
-            <h4 className="font-semibold text-orange-400 mb-2">What you will see:</h4>
+            <h4 className="font-semibold text-orange-400 mb-2">What you'll see:</h4>
             <ul className="text-sm text-gray-300 space-y-1">
               <li>• Step-by-step feature walkthrough</li>
               <li>• Real-time interactions</li>
