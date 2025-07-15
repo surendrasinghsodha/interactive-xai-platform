@@ -20,7 +20,6 @@ class InspectResponse(BaseModel):
 class TrainRequest(BaseModel):
     model_type: ModelType
     target_column: str
-    # feature_columns and problem_type are now derived in the backend
 
 class TrainResponse(BaseModel):
     model_id: str
@@ -29,7 +28,7 @@ class TrainResponse(BaseModel):
     problem_type: ProblemType
     target_column: str
     numeric_columns: List[str]
-    sample_data: List[Dict[str, Any]] # Pass sample data back for explanation selection
+    sample_data: List[Dict[str, Any]]
 
 class ExplainRequest(BaseModel):
     model_id: str
@@ -40,18 +39,25 @@ class ShapExplanation(BaseModel):
     shap_values: List[float]
     base_value: float
     explainer_type: str
+    reliability_score: Optional[float] = None
 
 class LimeExplanation(BaseModel):
     lime_explanation: Dict[str, float]
+    reliability_score: Optional[float] = None
 
 class ExplainResponse(BaseModel):
     shap: ShapExplanation
     lime: LimeExplanation
+    overall_reliability: Optional[float] = None
 
 class FeedbackRequest(BaseModel):
     model_id: str
+    explanation_id: Optional[str] = None
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
+    explanation_type: Optional[str] = "both"  # "shap", "lime", or "both"
 
 class FeedbackResponse(BaseModel):
     message: str
+    updated_reliability: Optional[float] = None
+    improvement_suggestions: Optional[List[str]] = None

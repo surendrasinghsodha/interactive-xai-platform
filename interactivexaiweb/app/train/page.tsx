@@ -7,10 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, BrainCircuit, CheckCircle } from "lucide-react"
+import { Loader2, BrainCircuit, CheckCircle, Upload } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Progress } from "@/components/ui/progress"
+import PageHeader from "@/components/page-header"
+import PageNavigation from "@/components/page-navigation"
 
 export default function TrainPage() {
   const { file, uploadResponse, isTraining, setIsTraining, setTrainResponse, trainingProgress, setTrainingProgress } =
@@ -19,6 +21,11 @@ export default function TrainPage() {
   const [targetColumn, setTargetColumn] = useState("")
   const { toast } = useToast()
   const router = useRouter()
+
+  const breadcrumbs = [
+    { label: "Upload Data", href: "/upload" },
+    { label: "Train Model", href: "/train", current: true },
+  ]
 
   useEffect(() => {
     if (!file || !uploadResponse) {
@@ -68,80 +75,114 @@ export default function TrainPage() {
   if (!uploadResponse) return null
 
   return (
-    <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Step 2: Train Your Model</h1>
-          <p className="text-xl text-muted-foreground">Configure and train a model on your uploaded data.</p>
-        </div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BrainCircuit className="mr-2 h-6 w-6" />
-              Training Configuration
-            </CardTitle>
-            <CardDescription>
-              Select your model type and target variable. The problem type (Classification/Regression) will be
-              auto-detected.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <Label htmlFor="model-type">Model Type</Label>
-                <Select onValueChange={setSelectedModel}>
-                  <SelectTrigger id="model-type">
-                    <SelectValue placeholder="Select a model" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="random_forest">Random Forest</SelectItem>
-                    <SelectItem value="decision_tree">Decision Tree</SelectItem>
-                    <SelectItem value="logistic_regression">Logistic Regression</SelectItem>
-                    <SelectItem value="svm">SVM</SelectItem>
-                    <SelectItem value="linear_regression">Linear Regression</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="target-column">Target Column</Label>
-                <Select onValueChange={setTargetColumn}>
-                  <SelectTrigger id="target-column">
-                    <SelectValue placeholder="Select target column" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uploadResponse.columns.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <Button onClick={handleTrain} disabled={isTraining || !selectedModel || !targetColumn} className="w-full">
-              {isTraining ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Training in Progress...
-                </>
-              ) : (
-                "Train Model"
-              )}
-            </Button>
-            {isTraining && <Progress value={trainingProgress} className="w-full mt-4" />}
-            {trainingProgress === 100 && (
-              <div className="mt-6 p-4 bg-green-900/20 rounded-lg border border-green-800">
-                <div className="flex items-center mb-2">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-                  <span className="font-medium text-green-300">Training Complete!</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/10 to-slate-900">
+      <PageHeader
+        title="Step 2: Train Your Model"
+        description="Configure and train a model on your uploaded data."
+        breadcrumbs={breadcrumbs}
+        backButtonHref="/upload"
+        backButtonText="Back to Upload"
+      />
+
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="space-y-8">
+          <PageNavigation
+            currentStep="/train"
+            previousStep={{
+              href: "/upload",
+              label: "Upload Data",
+              icon: Upload,
+              description: "Upload your dataset",
+            }}
+            nextStep={{
+              href: "/explanations",
+              label: "Get Explanations",
+              icon: CheckCircle,
+              description: "Generate model explanations",
+            }}
+          />
+
+          <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+            <CardHeader>
+              <CardTitle className="flex items-center text-white">
+                <BrainCircuit className="mr-2 h-6 w-6" />
+                Training Configuration
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Select your model type and target variable. The problem type (Classification/Regression) will be
+                auto-detected.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="model-type" className="text-white">
+                    Model Type
+                  </Label>
+                  <Select onValueChange={setSelectedModel}>
+                    <SelectTrigger id="model-type" className="bg-slate-700/50 border-slate-600 text-white">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      <SelectItem value="random_forest">Random Forest</SelectItem>
+                      <SelectItem value="decision_tree">Decision Tree</SelectItem>
+                      <SelectItem value="logistic_regression">Logistic Regression</SelectItem>
+                      <SelectItem value="svm">SVM</SelectItem>
+                      <SelectItem value="linear_regression">Linear Regression</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button asChild className="mt-2 w-full" size="sm">
-                  <Link href="/explanations">Proceed to Step 3: Get Explanations →</Link>
-                </Button>
+                <div>
+                  <Label htmlFor="target-column" className="text-white">
+                    Target Column
+                  </Label>
+                  <Select onValueChange={setTargetColumn}>
+                    <SelectTrigger id="target-column" className="bg-slate-700/50 border-slate-600 text-white">
+                      <SelectValue placeholder="Select target column" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-800 border-slate-700">
+                      {uploadResponse.columns.map((c) => (
+                        <SelectItem key={c} value={c}>
+                          {c}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+              <Button
+                onClick={handleTrain}
+                disabled={isTraining || !selectedModel || !targetColumn}
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+              >
+                {isTraining ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Training in Progress...
+                  </>
+                ) : (
+                  "Train Model"
+                )}
+              </Button>
+              {isTraining && <Progress value={trainingProgress} className="w-full mt-4" />}
+              {trainingProgress === 100 && (
+                <div className="mt-6 p-4 bg-green-900/20 rounded-lg border border-green-800">
+                  <div className="flex items-center mb-2">
+                    <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+                    <span className="font-medium text-green-300">Training Complete!</span>
+                  </div>
+                  <Button
+                    asChild
+                    className="mt-2 w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
+                    size="sm"
+                  >
+                    <Link href="/explanations">Proceed to Step 3: Get Explanations →</Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
