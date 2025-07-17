@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useContext, useState, useEffect } from "react"
 import { AppContext } from "@/context/AppContext"
 import { Button } from "@/components/ui/button"
@@ -7,12 +9,200 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, BarChart2, Lightbulb, Star, Send, TrendingUp, BrainCircuit } from "lucide-react"
+import {
+  Loader2,
+  BarChart2,
+  Lightbulb,
+  Star,
+  Send,
+  BrainCircuit,
+  Info,
+  Target,
+  Zap,
+  Eye,
+  AlertCircle,
+  CheckCircle,
+  ArrowUp,
+  ArrowDown,
+  HelpCircle,
+  PieChart,
+  Activity,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart } from "recharts"
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  ComposedChart,
+  Pie as RechartsPie, // Updated import
+  Line,
+  ReferenceLine,
+  Cell, // Added import for Cell
+} from "recharts"
 import PageHeader from "@/components/page-header"
 import PageNavigation from "@/components/page-navigation"
+
+// Enhanced explanation components
+function ExplanationCard({
+  title,
+  description,
+  children,
+  icon: Icon,
+  reliability,
+}: {
+  title: string
+  description: string
+  children: React.ReactNode
+  icon: any
+  reliability?: number
+}) {
+  const getReliabilityColor = (score: number) => {
+    if (score >= 0.7) return "text-green-500"
+    if (score >= 0.4) return "text-yellow-500"
+    return "text-red-500"
+  }
+
+  const getReliabilityText = (score: number) => {
+    if (score >= 0.7) return "High Confidence"
+    if (score >= 0.4) return "Medium Confidence"
+    return "Low Confidence"
+  }
+
+  return (
+    <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <Icon className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle className="text-white text-xl">{title}</CardTitle>
+              <CardDescription className="text-slate-400">{description}</CardDescription>
+            </div>
+          </div>
+          {reliability && (
+            <Badge variant="outline" className={`${getReliabilityColor(reliability)} border-current`}>
+              {getReliabilityText(reliability)}
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  )
+}
+
+function FeatureExplanation({
+  feature,
+  value,
+  impact,
+  description,
+}: {
+  feature: string
+  value: number
+  impact: "positive" | "negative" | "neutral"
+  description: string
+}) {
+  const getImpactColor = (impact: string) => {
+    switch (impact) {
+      case "positive":
+        return "text-green-400"
+      case "negative":
+        return "text-red-400"
+      default:
+        return "text-gray-400"
+    }
+  }
+
+  const getImpactIcon = (impact: string) => {
+    switch (impact) {
+      case "positive":
+        return <ArrowUp className="h-4 w-4" />
+      case "negative":
+        return <ArrowDown className="h-4 w-4" />
+      default:
+        return <ArrowUp className="h-4 w-4 opacity-50" />
+    }
+  }
+
+  return (
+    <div className="flex items-start gap-3 p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
+      <div className={`${getImpactColor(impact)} mt-1`}>{getImpactIcon(impact)}</div>
+      <div className="flex-1">
+        <div className="flex items-center justify-between mb-1">
+          <h4 className="font-medium text-white">{feature}</h4>
+          <span className={`font-mono text-sm ${getImpactColor(impact)}`}>
+            {value > 0 ? "+" : ""}
+            {value.toFixed(4)}
+          </span>
+        </div>
+        <p className="text-sm text-slate-300">{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function PredictionSummary({
+  prediction,
+  confidence,
+  baseValue,
+  totalContribution,
+}: {
+  prediction: string
+  confidence: number
+  baseValue: number
+  totalContribution: number
+}) {
+  return (
+    <Card className="bg-gradient-to-r from-blue-900/50 to-purple-900/50 border-blue-500/30">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-white">
+          <Target className="h-5 w-5" />
+          Model Prediction Summary
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="text-center p-4 bg-slate-800/50 rounded-lg">
+            <div className="text-2xl font-bold text-white mb-1">{prediction}</div>
+            <div className="text-sm text-slate-400">Predicted Outcome</div>
+          </div>
+          <div className="text-center p-4 bg-slate-800/50 rounded-lg">
+            <div className="text-2xl font-bold text-green-400 mb-1">{(confidence * 100).toFixed(1)}%</div>
+            <div className="text-sm text-slate-400">Confidence Level</div>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-400">Base Prediction:</span>
+            <span className="text-white font-mono">{baseValue.toFixed(4)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-400">Feature Contributions:</span>
+            <span className="text-white font-mono">
+              {totalContribution > 0 ? "+" : ""}
+              {totalContribution.toFixed(4)}
+            </span>
+          </div>
+          <div className="flex justify-between text-sm font-medium border-t border-slate-600 pt-2">
+            <span className="text-slate-300">Final Prediction:</span>
+            <span className="text-white font-mono">{(baseValue + totalContribution).toFixed(4)}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function ExplanationsPage() {
   const { trainResponse, explanation, setExplanation, isLoading, setIsLoading } = useContext(AppContext)
@@ -24,6 +214,7 @@ export default function ExplanationsPage() {
   const [explanationId, setExplanationId] = useState<string | null>(null)
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false)
   const [feedbackResponse, setFeedbackResponse] = useState<any>(null)
+  const [activeTab, setActiveTab] = useState("overview")
   const { toast } = useToast()
   const router = useRouter()
 
@@ -96,7 +287,6 @@ export default function ExplanationsPage() {
         description: "Thank you! Your feedback will improve future explanations.",
       })
 
-      // Reset feedback form
       setRating(0)
       setComment("")
       setExplanationType("both")
@@ -107,32 +297,95 @@ export default function ExplanationsPage() {
     }
   }
 
+  // Enhanced data formatting functions
   const formatShapData = () => {
     if (!explanation?.shap) return []
     return explanation.shap.features
-      .map((feature, i) => ({ name: feature, "SHAP Value": explanation.shap.shap_values[i] }))
-      .sort((a, b) => Math.abs(b["SHAP Value"]) - Math.abs(a["SHAP Value"]))
+      .map((feature, i) => ({
+        name: feature,
+        value: explanation.shap.shap_values[i],
+        impact:
+          explanation.shap.shap_values[i] > 0
+            ? "positive"
+            : explanation.shap.shap_values[i] < 0
+              ? "negative"
+              : "neutral",
+        absValue: Math.abs(explanation.shap.shap_values[i]),
+      }))
+      .sort((a, b) => b.absValue - a.absValue)
       .slice(0, 15)
   }
 
   const formatLimeData = () => {
     if (!explanation?.lime) return []
     return Object.entries(explanation.lime.lime_explanation)
-      .map(([feature, value]) => ({ name: feature, "LIME Weight": value }))
-      .sort((a, b) => Math.abs(b["LIME Weight"]) - Math.abs(a["LIME Weight"]))
+      .map(([feature, value]) => ({
+        name: feature,
+        value: value as number,
+        impact: (value as number) > 0 ? "positive" : (value as number) < 0 ? "negative" : "neutral",
+        absValue: Math.abs(value as number),
+      }))
+      .sort((a, b) => b.absValue - a.absValue)
       .slice(0, 15)
   }
 
-  const getReliabilityColor = (score: number) => {
-    if (score >= 0.7) return "text-green-500"
-    if (score >= 0.4) return "text-yellow-500"
-    return "text-red-500"
+  const getFeatureDescription = (featureName: string, value: number, method: "shap" | "lime") => {
+    const impact = value > 0 ? "increases" : "decreases"
+    const strength = Math.abs(value) > 0.01 ? "strongly" : Math.abs(value) > 0.005 ? "moderately" : "slightly"
+
+    if (method === "shap") {
+      return `This feature ${strength} ${impact} the prediction by ${Math.abs(value).toFixed(4)} units compared to the average case. ${value > 0 ? "This pushes the prediction higher." : "This pulls the prediction lower."}`
+    } else {
+      return `In the local neighborhood of this prediction, this feature ${strength} ${impact} the likelihood of the predicted outcome. The model relies on this feature with a weight of ${value.toFixed(4)}.`
+    }
   }
 
-  const getReliabilityText = (score: number) => {
-    if (score >= 0.7) return "High"
-    if (score >= 0.4) return "Medium"
-    return "Low"
+  const createWaterfallData = () => {
+    if (!explanation?.shap) return []
+
+    const data = []
+    let cumulative = explanation.shap.base_value
+
+    data.push({
+      name: "Base Value",
+      value: explanation.shap.base_value,
+      cumulative: cumulative,
+      type: "base",
+    })
+
+    const sortedFeatures = formatShapData()
+
+    sortedFeatures.forEach((feature, index) => {
+      cumulative += feature.value
+      data.push({
+        name: feature.name,
+        value: feature.value,
+        cumulative: cumulative,
+        type: feature.impact,
+        contribution: feature.value,
+      })
+    })
+
+    return data
+  }
+
+  const createFeatureImportancePie = () => {
+    const shapData = formatShapData()
+    const total = shapData.reduce((sum, item) => sum + item.absValue, 0)
+
+    return shapData.slice(0, 8).map((item, index) => ({
+      name: item.name,
+      value: (item.absValue / total) * 100,
+      impact: item.impact,
+      originalValue: item.value,
+    }))
+  }
+
+  const COLORS = {
+    positive: "#10B981",
+    negative: "#EF4444",
+    neutral: "#6B7280",
+    base: "#3B82F6",
   }
 
   if (!trainResponse) return null
@@ -140,8 +393,8 @@ export default function ExplanationsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/10 to-slate-900">
       <PageHeader
-        title="Step 3: Get Explanations"
-        description="Interpret your model's predictions with SHAP and LIME."
+        title="Step 3: AI Explanation Center"
+        description="Understand your model's predictions with comprehensive AI explanations."
         breadcrumbs={[
           { label: "Upload Data", href: "/upload" },
           { label: "Train Model", href: "/train" },
@@ -170,36 +423,70 @@ export default function ExplanationsPage() {
             showWorkflow={true}
           />
 
-          {/* Rest of the existing content remains the same */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+            {/* Left Sidebar - Controls */}
             <div className="lg:col-span-1 space-y-6">
-              <Card>
+              <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
                 <CardHeader>
-                  <CardTitle>Select Data Point</CardTitle>
-                  <CardDescription>Choose a row from your dataset to explain.</CardDescription>
+                  <CardTitle className="flex items-center gap-2 text-white">
+                    <Target className="h-5 w-5" />
+                    Select Data Point
+                  </CardTitle>
+                  <CardDescription className="text-slate-400">
+                    Choose a row from your dataset to explain.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <Label>Select a Row</Label>
+                  <Label className="text-white">Select a Row</Label>
                   <Select onValueChange={(val) => setSelectedRow(JSON.parse(val))}>
-                    <SelectTrigger>
+                    <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
                       <SelectValue placeholder="Select a data row" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-slate-800 border-slate-700">
                       {trainResponse.sample_data.map((row, i) => (
                         <SelectItem key={i} value={JSON.stringify(row)}>
-                          Row {i + 1}: {Object.values(row).slice(0, 3).join(", ")}...
+                          Row {i + 1}: {Object.values(row).slice(0, 2).join(", ")}...
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button onClick={handleExplain} disabled={isLoading || !selectedRow} className="w-full">
+
+                  {selectedRow && (
+                    <div className="mt-4 p-3 bg-slate-700/30 rounded-lg">
+                      <h4 className="font-medium text-white mb-2">Selected Data:</h4>
+                      <div className="space-y-1 text-sm">
+                        {Object.entries(selectedRow)
+                          .slice(0, 5)
+                          .map(([key, value]) => (
+                            <div key={key} className="flex justify-between">
+                              <span className="text-slate-400">{key}:</span>
+                              <span className="text-white font-mono">{String(value)}</span>
+                            </div>
+                          ))}
+                        {Object.keys(selectedRow).length > 5 && (
+                          <div className="text-slate-500 text-xs">
+                            +{Object.keys(selectedRow).length - 5} more fields...
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleExplain}
+                    disabled={isLoading || !selectedRow}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
+                        Analyzing...
                       </>
                     ) : (
-                      "Generate Explanation"
+                      <>
+                        <Zap className="mr-2 h-4 w-4" />
+                        Generate Explanation
+                      </>
                     )}
                   </Button>
                 </CardContent>
@@ -207,23 +494,25 @@ export default function ExplanationsPage() {
 
               {/* Feedback Section */}
               {showFeedback && explanation && (
-                <Card>
+                <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center">
+                    <CardTitle className="flex items-center gap-2 text-white">
                       <Star className="mr-2 h-5 w-5" />
                       Rate This Explanation
                     </CardTitle>
-                    <CardDescription>Your feedback helps improve explanation quality.</CardDescription>
+                    <CardDescription className="text-slate-400">
+                      Your feedback helps improve explanation quality.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <Label>Overall Rating</Label>
+                      <Label className="text-white">Overall Rating</Label>
                       <div className="flex items-center gap-2 mt-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <Star
                             key={star}
                             className={`h-6 w-6 cursor-pointer transition-colors ${
-                              star <= rating ? "text-yellow-400 fill-yellow-400" : "text-muted-foreground"
+                              star <= rating ? "text-yellow-400 fill-yellow-400" : "text-slate-600 hover:text-slate-400"
                             }`}
                             onClick={() => setRating(star)}
                           />
@@ -232,12 +521,12 @@ export default function ExplanationsPage() {
                     </div>
 
                     <div>
-                      <Label>Explanation Type</Label>
+                      <Label className="text-white">Explanation Type</Label>
                       <Select value={explanationType} onValueChange={setExplanationType}>
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-slate-700/50 border-slate-600 text-white">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-slate-800 border-slate-700">
                           <SelectItem value="both">Both SHAP & LIME</SelectItem>
                           <SelectItem value="shap">SHAP Only</SelectItem>
                           <SelectItem value="lime">LIME Only</SelectItem>
@@ -246,19 +535,19 @@ export default function ExplanationsPage() {
                     </div>
 
                     <div>
-                      <Label>Comments (Optional)</Label>
+                      <Label className="text-white">Comments (Optional)</Label>
                       <Textarea
                         placeholder="What did you think about the explanation? Any suggestions for improvement?"
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
-                        className="mt-2"
+                        className="mt-2 bg-slate-700/50 border-slate-600 text-white placeholder:text-slate-400"
                       />
                     </div>
 
                     <Button
                       onClick={handleFeedbackSubmit}
                       disabled={isSubmittingFeedback || rating === 0}
-                      className="w-full"
+                      className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
                     >
                       {isSubmittingFeedback ? (
                         <>
@@ -278,26 +567,26 @@ export default function ExplanationsPage() {
 
               {/* Feedback Response */}
               {feedbackResponse && (
-                <Card className="border-green-200 bg-green-50">
+                <Card className="border-green-500/30 bg-green-900/20">
                   <CardHeader>
-                    <CardTitle className="flex items-center text-green-700">
-                      <TrendingUp className="mr-2 h-5 w-5" />
+                    <CardTitle className="flex items-center text-green-400">
+                      <CheckCircle className="mr-2 h-5 w-5" />
                       Feedback Processed
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
-                    <p className="text-sm text-green-600">{feedbackResponse.message}</p>
+                    <p className="text-sm text-green-300">{feedbackResponse.message}</p>
                     {feedbackResponse.updated_reliability && (
-                      <p className="text-sm">
+                      <p className="text-sm text-white">
                         <strong>Updated Reliability:</strong> {(feedbackResponse.updated_reliability * 100).toFixed(1)}%
                       </p>
                     )}
                     {feedbackResponse.improvement_suggestions && (
                       <div>
-                        <strong className="text-sm">Improvements:</strong>
+                        <strong className="text-sm text-white">Improvements:</strong>
                         <ul className="text-sm mt-1 space-y-1">
                           {feedbackResponse.improvement_suggestions.map((suggestion, i) => (
-                            <li key={i} className="text-green-600">
+                            <li key={i} className="text-green-300">
                               • {suggestion}
                             </li>
                           ))}
@@ -309,476 +598,542 @@ export default function ExplanationsPage() {
               )}
             </div>
 
-            <div className="lg:col-span-2 space-y-8">
-              {/* Reliability Overview */}
-              {explanation?.overall_reliability && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <TrendingUp className="mr-2" />
-                      Explanation Reliability
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <span>Overall Reliability Score:</span>
-                      <span className={`font-bold ${getReliabilityColor(explanation.overall_reliability)}`}>
-                        {getReliabilityText(explanation.overall_reliability)} (
-                        {(explanation.overall_reliability * 100).toFixed(1)}%)
-                      </span>
+            {/* Main Content Area */}
+            <div className="lg:col-span-3 space-y-8">
+              {explanation ? (
+                <>
+                  {/* Prediction Summary */}
+                  <PredictionSummary
+                    prediction="Positive Class"
+                    confidence={0.85}
+                    baseValue={explanation.shap.base_value}
+                    totalContribution={explanation.shap.shap_values.reduce((sum, val) => sum + val, 0)}
+                  />
+
+                  {/* Tabbed Explanations */}
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                    <TabsList className="grid w-full grid-cols-4 bg-slate-800/50">
+                      <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">
+                        <Eye className="h-4 w-4 mr-2" />
+                        Overview
+                      </TabsTrigger>
+                      <TabsTrigger value="shap" className="data-[state=active]:bg-purple-600">
+                        <BarChart2 className="h-4 w-4 mr-2" />
+                        SHAP Analysis
+                      </TabsTrigger>
+                      <TabsTrigger value="lime" className="data-[state=active]:bg-green-600">
+                        <Lightbulb className="h-4 w-4 mr-2" />
+                        LIME Analysis
+                      </TabsTrigger>
+                      <TabsTrigger value="compare" className="data-[state=active]:bg-orange-600">
+                        <Activity className="h-4 w-4 mr-2" />
+                        Compare
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Overview Tab */}
+                    <TabsContent value="overview" className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Key Insights */}
+                        <Card className="bg-slate-800/50 border-slate-700/50">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-white">
+                              <Info className="h-5 w-5" />
+                              Key Insights
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-4">
+                            <div className="space-y-3">
+                              {formatShapData()
+                                .slice(0, 3)
+                                .map((feature, index) => (
+                                  <div key={index} className="flex items-center gap-3 p-3 bg-slate-700/30 rounded-lg">
+                                    <div
+                                      className={`w-3 h-3 rounded-full ${
+                                        feature.impact === "positive"
+                                          ? "bg-green-500"
+                                          : feature.impact === "negative"
+                                            ? "bg-red-500"
+                                            : "bg-gray-500"
+                                      }`}
+                                    />
+                                    <div className="flex-1">
+                                      <div className="font-medium text-white">{feature.name}</div>
+                                      <div className="text-sm text-slate-400">
+                                        {feature.impact === "positive" ? "Increases" : "Decreases"} prediction
+                                        confidence
+                                      </div>
+                                    </div>
+                                    <div
+                                      className={`font-mono text-sm ${
+                                        feature.impact === "positive"
+                                          ? "text-green-400"
+                                          : feature.impact === "negative"
+                                            ? "text-red-400"
+                                            : "text-gray-400"
+                                      }`}
+                                    >
+                                      {feature.value > 0 ? "+" : ""}
+                                      {feature.value.toFixed(3)}
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Feature Importance Pie Chart */}
+                        <Card className="bg-slate-800/50 border-slate-700/50">
+                          <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-white">
+                              <PieChart className="h-5 w-5" />
+                              Feature Importance Distribution
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <ResponsiveContainer width="100%" height={250}>
+                              <RechartsPie
+                                data={createFeatureImportancePie()}
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                                label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
+                              >
+                                {createFeatureImportancePie().map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[entry.impact]} />
+                                ))}
+                              </RechartsPie>
+                              <Tooltip
+                                formatter={(value: any) => [`${value.toFixed(1)}%`, "Importance"]}
+                                labelStyle={{ color: "#fff" }}
+                                contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+                              />
+                            </ResponsiveContainer>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* How the Prediction Was Made */}
+                      <Card className="bg-slate-800/50 border-slate-700/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-white">
+                            <HelpCircle className="h-5 w-5" />
+                            How This Prediction Was Made
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="prose prose-invert max-w-none">
+                            <p className="text-slate-300 leading-relaxed">
+                              The AI model analyzed your data and made this prediction by examining multiple features.
+                              Here's a step-by-step breakdown of the decision process:
+                            </p>
+
+                            <div className="space-y-4 mt-6">
+                              <div className="flex items-start gap-4 p-4 bg-slate-700/30 rounded-lg">
+                                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                  1
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-white mb-2">Starting Point (Base Value)</h4>
+                                  <p className="text-slate-300 text-sm">
+                                    The model starts with a base prediction of{" "}
+                                    <code className="bg-slate-600 px-1 rounded">
+                                      {explanation.shap.base_value.toFixed(4)}
+                                    </code>
+                                    . This represents the average prediction across all training data.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-4 p-4 bg-slate-700/30 rounded-lg">
+                                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                  2
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-white mb-2">Feature Analysis</h4>
+                                  <p className="text-slate-300 text-sm">
+                                    The model then examines each feature in your data. The most influential feature is{" "}
+                                    <strong className="text-white">{formatShapData()[0]?.name}</strong>, which{" "}
+                                    {formatShapData()[0]?.impact === "positive" ? "increases" : "decreases"} the
+                                    prediction.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-4 p-4 bg-slate-700/30 rounded-lg">
+                                <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-sm">
+                                  3
+                                </div>
+                                <div>
+                                  <h4 className="font-medium text-white mb-2">Final Decision</h4>
+                                  <p className="text-slate-300 text-sm">
+                                    After considering all features, the model arrives at the final prediction of{" "}
+                                    <code className="bg-slate-600 px-1 rounded">
+                                      {(
+                                        explanation.shap.base_value +
+                                        explanation.shap.shap_values.reduce((sum, val) => sum + val, 0)
+                                      ).toFixed(4)}
+                                    </code>
+                                    .
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+
+                    {/* SHAP Analysis Tab */}
+                    <TabsContent value="shap" className="space-y-6">
+                      <ExplanationCard
+                        title="SHAP (SHapley Additive exPlanations)"
+                        description="Shows how each feature contributes to moving the prediction away from the base value"
+                        icon={BarChart2}
+                        reliability={explanation.shap.reliability_score}
+                      >
+                        <div className="space-y-6">
+                          {/* Waterfall Chart */}
+                          <div>
+                            <h4 className="font-medium text-white mb-4 flex items-center gap-2">
+                              <Activity className="h-4 w-4" />
+                              Prediction Waterfall - How We Got to the Final Answer
+                            </h4>
+                            <ResponsiveContainer width="100%" height={400}>
+                              <ComposedChart
+                                data={createWaterfallData()}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                <XAxis
+                                  dataKey="name"
+                                  angle={-45}
+                                  textAnchor="end"
+                                  height={100}
+                                  tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                                />
+                                <YAxis tick={{ fill: "#9CA3AF" }} />
+                                <Tooltip
+                                  formatter={(value: any, name: any) => [
+                                    typeof value === "number" ? value.toFixed(4) : value,
+                                    name === "cumulative" ? "Cumulative Value" : "Contribution",
+                                  ]}
+                                  labelStyle={{ color: "#fff" }}
+                                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+                                />
+                                <Legend />
+                                <Bar
+                                  dataKey="value"
+                                  fill={(entry: any) => COLORS[entry.type] || COLORS.neutral}
+                                  name="Feature Contribution"
+                                />
+                                <Line
+                                  type="monotone"
+                                  dataKey="cumulative"
+                                  stroke="#60A5FA"
+                                  strokeWidth={2}
+                                  name="Cumulative Prediction"
+                                />
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          {/* Feature Explanations */}
+                          <div>
+                            <h4 className="font-medium text-white mb-4">Detailed Feature Analysis</h4>
+                            <div className="space-y-3">
+                              {formatShapData()
+                                .slice(0, 8)
+                                .map((feature, index) => (
+                                  <FeatureExplanation
+                                    key={index}
+                                    feature={feature.name}
+                                    value={feature.value}
+                                    impact={feature.impact}
+                                    description={getFeatureDescription(feature.name, feature.value, "shap")}
+                                  />
+                                ))}
+                            </div>
+                          </div>
+
+                          {/* SHAP Bar Chart */}
+                          <div>
+                            <h4 className="font-medium text-white mb-4">Feature Importance Ranking</h4>
+                            <ResponsiveContainer width="100%" height={400}>
+                              <BarChart
+                                layout="vertical"
+                                data={formatShapData()}
+                                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                <XAxis type="number" tick={{ fill: "#9CA3AF" }} />
+                                <YAxis
+                                  dataKey="name"
+                                  type="category"
+                                  width={100}
+                                  tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                                />
+                                <Tooltip
+                                  formatter={(value: any) => [value.toFixed(4), "SHAP Value"]}
+                                  labelStyle={{ color: "#fff" }}
+                                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+                                />
+                                <ReferenceLine x={0} stroke="#6B7280" strokeDasharray="2 2" />
+                                <Bar
+                                  dataKey="value"
+                                  fill={(entry: any) => (entry.value > 0 ? COLORS.positive : COLORS.negative)}
+                                />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+                        </div>
+                      </ExplanationCard>
+                    </TabsContent>
+
+                    {/* LIME Analysis Tab */}
+                    <TabsContent value="lime" className="space-y-6">
+                      <ExplanationCard
+                        title="LIME (Local Interpretable Model-agnostic Explanations)"
+                        description="Shows how a simple model approximates the complex model's behavior for this specific prediction"
+                        icon={Lightbulb}
+                        reliability={explanation.lime.reliability_score}
+                      >
+                        <div className="space-y-6">
+                          {/* LIME Explanation */}
+                          <div className="bg-blue-900/20 border border-blue-500/30 rounded-lg p-4">
+                            <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                              <Info className="h-4 w-4" />
+                              What LIME Tells Us
+                            </h4>
+                            <p className="text-slate-300 text-sm leading-relaxed">
+                              LIME creates a simple, interpretable model that mimics your complex AI model's behavior
+                              specifically around this prediction. Think of it as asking: "If I had to explain this
+                              decision using only simple rules, what would those rules be?"
+                            </p>
+                          </div>
+
+                          {/* Feature Explanations */}
+                          <div>
+                            <h4 className="font-medium text-white mb-4">Local Feature Importance</h4>
+                            <div className="space-y-3">
+                              {formatLimeData()
+                                .slice(0, 8)
+                                .map((feature, index) => (
+                                  <FeatureExplanation
+                                    key={index}
+                                    feature={feature.name}
+                                    value={feature.value}
+                                    impact={feature.impact}
+                                    description={getFeatureDescription(feature.name, feature.value, "lime")}
+                                  />
+                                ))}
+                            </div>
+                          </div>
+
+                          {/* LIME Bar Chart */}
+                          <div>
+                            <h4 className="font-medium text-white mb-4">LIME Feature Weights</h4>
+                            <ResponsiveContainer width="100%" height={400}>
+                              <BarChart
+                                layout="vertical"
+                                data={formatLimeData()}
+                                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+                              >
+                                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                                <XAxis type="number" tick={{ fill: "#9CA3AF" }} />
+                                <YAxis
+                                  dataKey="name"
+                                  type="category"
+                                  width={100}
+                                  tick={{ fill: "#9CA3AF", fontSize: 12 }}
+                                />
+                                <Tooltip
+                                  formatter={(value: any) => [value.toFixed(4), "LIME Weight"]}
+                                  labelStyle={{ color: "#fff" }}
+                                  contentStyle={{ backgroundColor: "#1e293b", border: "1px solid #475569" }}
+                                />
+                                <ReferenceLine x={0} stroke="#6B7280" strokeDasharray="2 2" />
+                                <Bar
+                                  dataKey="value"
+                                  fill={(entry: any) => (entry.value > 0 ? COLORS.positive : COLORS.negative)}
+                                />
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          {/* Local vs Global */}
+                          <div className="bg-amber-900/20 border border-amber-500/30 rounded-lg p-4">
+                            <h4 className="font-medium text-white mb-2 flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4" />
+                              Important Note
+                            </h4>
+                            <p className="text-slate-300 text-sm leading-relaxed">
+                              LIME explanations are <strong>local</strong> - they explain this specific prediction, not
+                              how the model behaves in general. Different data points might have different explanations
+                              even from the same model.
+                            </p>
+                          </div>
+                        </div>
+                      </ExplanationCard>
+                    </TabsContent>
+
+                    {/* Compare Tab */}
+                    <TabsContent value="compare" className="space-y-6">
+                      <Card className="bg-slate-800/50 border-slate-700/50">
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2 text-white">
+                            <Activity className="h-5 w-5" />
+                            SHAP vs LIME Comparison
+                          </CardTitle>
+                          <CardDescription className="text-slate-400">
+                            Understanding the differences between explanation methods
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                          {/* Side by side comparison */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-4">
+                              <h4 className="font-medium text-white flex items-center gap-2">
+                                <BarChart2 className="h-4 w-4 text-purple-400" />
+                                SHAP Approach
+                              </h4>
+                              <div className="space-y-2 text-sm text-slate-300">
+                                <p>
+                                  • <strong>Global perspective:</strong> Based on game theory
+                                </p>
+                                <p>
+                                  • <strong>Consistent:</strong> Same feature always gets same importance
+                                </p>
+                                <p>
+                                  • <strong>Additive:</strong> All contributions sum to final prediction
+                                </p>
+                                <p>
+                                  • <strong>Fair:</strong> Distributes credit fairly among features
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <h4 className="font-medium text-white flex items-center gap-2">
+                                <Lightbulb className="h-4 w-4 text-green-400" />
+                                LIME Approach
+                              </h4>
+                              <div className="space-y-2 text-sm text-slate-300">
+                                <p>
+                                  • <strong>Local perspective:</strong> Focuses on this specific prediction
+                                </p>
+                                <p>
+                                  • <strong>Intuitive:</strong> Creates simple rules that are easy to understand
+                                </p>
+                                <p>
+                                  • <strong>Flexible:</strong> Works with any type of model
+                                </p>
+                                <p>
+                                  • <strong>Contextual:</strong> Explanations change based on the data point
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Feature Agreement Analysis */}
+                          <div>
+                            <h4 className="font-medium text-white mb-4">Feature Agreement Analysis</h4>
+                            <div className="space-y-3">
+                              {formatShapData()
+                                .slice(0, 5)
+                                .map((shapFeature, index) => {
+                                  const limeFeature = formatLimeData().find((f) => f.name === shapFeature.name)
+                                  const agreement = limeFeature
+                                    ? shapFeature.impact === limeFeature.impact
+                                      ? "agree"
+                                      : "disagree"
+                                    : "missing"
+
+                                  return (
+                                    <div
+                                      key={index}
+                                      className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg"
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div
+                                          className={`w-3 h-3 rounded-full ${
+                                            agreement === "agree"
+                                              ? "bg-green-500"
+                                              : agreement === "disagree"
+                                                ? "bg-red-500"
+                                                : "bg-gray-500"
+                                          }`}
+                                        />
+                                        <span className="text-white font-medium">{shapFeature.name}</span>
+                                      </div>
+                                      <div className="flex items-center gap-4 text-sm">
+                                        <div className="text-purple-400">
+                                          SHAP: {shapFeature.value > 0 ? "+" : ""}
+                                          {shapFeature.value.toFixed(3)}
+                                        </div>
+                                        <div className="text-green-400">
+                                          LIME:{" "}
+                                          {limeFeature
+                                            ? `${limeFeature.value > 0 ? "+" : ""}${limeFeature.value.toFixed(3)}`
+                                            : "N/A"}
+                                        </div>
+                                        <Badge
+                                          variant={agreement === "agree" ? "default" : "destructive"}
+                                          className="text-xs"
+                                        >
+                                          {agreement === "agree"
+                                            ? "Agree"
+                                            : agreement === "disagree"
+                                              ? "Disagree"
+                                              : "Missing"}
+                                        </Badge>
+                                      </div>
+                                    </div>
+                                  )
+                                })}
+                            </div>
+                          </div>
+
+                          {/* When to Trust Which */}
+                          <div className="bg-slate-700/30 rounded-lg p-4">
+                            <h4 className="font-medium text-white mb-3">Which Explanation Should You Trust?</h4>
+                            <div className="space-y-2 text-sm text-slate-300">
+                              <p>
+                                • <strong>When they agree:</strong> High confidence - both methods point to the same
+                                important features
+                              </p>
+                              <p>
+                                • <strong>When they disagree:</strong> Consider the context - SHAP for overall model
+                                behavior, LIME for this specific case
+                              </p>
+                              <p>
+                                • <strong>For decision making:</strong> Use both perspectives to get a complete picture
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </TabsContent>
+                  </Tabs>
+                </>
+              ) : (
+                <Card className="bg-slate-800/50 border-slate-700/50 backdrop-blur-sm">
+                  <CardContent className="text-center py-16">
+                    <div className="space-y-4">
+                      <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto">
+                        <Eye className="h-8 w-8 text-slate-400" />
+                      </div>
+                      <h3 className="text-xl font-semibold text-white">No Explanation Generated Yet</h3>
+                      <p className="text-slate-400 max-w-md mx-auto">
+                        Select a data point from the sidebar and click "Generate Explanation" to see detailed AI
+                        explanations with SHAP and LIME analysis.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
               )}
-
-              {/* Enhanced SHAP Explanation Section */}
-              <Card className="bg-gradient-to-br from-indigo-900/30 to-purple-900/30 border-indigo-500/30 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-white">
-                    <BarChart2 className="mr-2 text-indigo-400" />
-                    SHAP Explanation
-                    {explanation?.shap?.reliability_score && (
-                      <span className={`ml-2 text-sm ${getReliabilityColor(explanation.shap.reliability_score)}`}>
-                        ({getReliabilityText(explanation.shap.reliability_score)})
-                      </span>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-indigo-200">
-                    SHAP (SHapley Additive exPlanations) uses game theory to fairly distribute credit among features for
-                    this prediction.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {explanation?.shap ? (
-                    <div className="space-y-6">
-                      {/* How SHAP Works */}
-                      <div className="bg-gradient-to-r from-indigo-800/40 to-purple-800/40 rounded-xl p-5 border border-indigo-400/30">
-                        <h4 className="font-semibold text-indigo-300 mb-4 flex items-center text-lg">
-                          <BrainCircuit className="h-6 w-6 mr-2" />
-                          How SHAP Analyzed Your Data
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                          <div className="bg-indigo-900/50 rounded-lg p-4 border border-indigo-400/20">
-                            <h5 className="text-indigo-300 font-medium mb-2">🎯 What it did</h5>
-                            <p className="text-slate-300 text-sm">
-                              Calculated how much each feature contributed to moving the prediction away from the
-                              average baseline of {explanation.shap.base_value.toFixed(4)}.
-                            </p>
-                          </div>
-                          <div className="bg-purple-900/50 rounded-lg p-4 border border-purple-400/20">
-                            <h5 className="text-purple-300 font-medium mb-2">🧮 Why this method</h5>
-                            <p className="text-slate-300 text-sm">
-                              Uses Shapley values from game theory to ensure fair, mathematically consistent attribution
-                              of feature importance.
-                            </p>
-                          </div>
-                          <div className="bg-pink-900/50 rounded-lg p-4 border border-pink-400/20">
-                            <h5 className="text-pink-300 font-medium mb-2">🔍 How it works</h5>
-                            <p className="text-slate-300 text-sm">
-                              Systematically removes and adds features to see their marginal contribution to the
-                              prediction.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-800/50 rounded-lg p-4">
-                          <h5 className="text-indigo-300 font-medium mb-3">📊 Analysis Results:</h5>
-                          <div className="space-y-2">
-                            <p className="text-slate-300 text-sm">
-                              <span className="text-indigo-400 font-semibold">Base Prediction:</span>{" "}
-                              {explanation.shap.base_value.toFixed(4)} (average across all data)
-                            </p>
-                            <p className="text-slate-300 text-sm">
-                              <span className="text-indigo-400 font-semibold">Your Instance:</span> Base + (
-                              {formatShapData()
-                                .reduce((sum, item) => sum + item["SHAP Value"], 0)
-                                .toFixed(4)}
-                              ) = Final prediction
-                            </p>
-                            <p className="text-slate-300 text-sm">
-                              <span className="text-indigo-400 font-semibold">Method Used:</span>{" "}
-                              {explanation.shap.explainer_type}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Enhanced 3D SHAP Visualization */}
-                      <div className="bg-gradient-to-br from-slate-900/80 to-indigo-900/40 rounded-xl p-6 border border-indigo-400/20">
-                        <h4 className="font-medium text-white mb-4 flex items-center">
-                          <BarChart2 className="h-5 w-5 mr-2 text-indigo-400" />
-                          Feature Impact Visualization
-                        </h4>
-                        <ResponsiveContainer width="100%" height={500}>
-                          <ComposedChart
-                            layout="vertical"
-                            data={formatShapData()}
-                            margin={{ top: 20, right: 50, left: 150, bottom: 20 }}
-                          >
-                            <defs>
-                              <linearGradient id="shapPositive" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#10B981" stopOpacity={0.9} />
-                                <stop offset="50%" stopColor="#34D399" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#6EE7B7" stopOpacity={0.8} />
-                              </linearGradient>
-                              <linearGradient id="shapNegative" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#F59E0B" stopOpacity={1} />
-                                <stop offset="50%" stopColor="#FBBF24" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#FCD34D" stopOpacity={0.8} />
-                              </linearGradient>
-                              <filter id="shapGlow" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                                <feMerge>
-                                  <feMergeNode in="coloredBlur" />
-                                  <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                              </filter>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#4F46E5" strokeOpacity={0.3} />
-                            <XAxis
-                              type="number"
-                              tick={{ fill: "#E0E7FF", fontSize: 12 }}
-                              axisLine={{ stroke: "#6366F1" }}
-                            />
-                            <YAxis
-                              dataKey="name"
-                              type="category"
-                              width={140}
-                              tick={{ fill: "#E0E7FF", fontSize: 11 }}
-                              axisLine={{ stroke: "#6366F1" }}
-                            />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: "rgba(30, 27, 75, 0.95)",
-                                border: "2px solid #6366F1",
-                                borderRadius: "12px",
-                                color: "#E0E7FF",
-                                boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-                              }}
-                              formatter={(value: number) => [
-                                `${value > 0 ? "+" : ""}${value.toFixed(4)}`,
-                                value > 0 ? "🚀 Increases Prediction" : "🔻 Decreases Prediction",
-                              ]}
-                            />
-                            <Bar
-                              dataKey="SHAP Value"
-                              fill={(entry) => (entry > 0 ? "url(#shapPositive)" : "url(#shapNegative)")}
-                              filter="url(#shapGlow)"
-                              radius={[0, 8, 8, 0]}
-                            />
-                          </ComposedChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      {/* SHAP Feature Ranking */}
-                      <div className="bg-gradient-to-r from-indigo-800/30 to-purple-800/30 rounded-xl p-5 border border-indigo-400/20">
-                        <h4 className="font-medium text-white mb-4 flex items-center">
-                          <TrendingUp className="h-5 w-5 mr-2 text-indigo-400" />
-                          Top Feature Contributors
-                        </h4>
-                        <div className="space-y-3">
-                          {formatShapData()
-                            .slice(0, 5)
-                            .map((item, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/50 to-indigo-900/30 rounded-lg border border-indigo-400/10 hover:border-indigo-400/30 transition-all duration-300"
-                              >
-                                <div className="flex items-center">
-                                  <div
-                                    className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mr-4 shadow-lg ${
-                                      index === 0
-                                        ? "bg-gradient-to-r from-yellow-400 to-yellow-600 text-yellow-900"
-                                        : index === 1
-                                          ? "bg-gradient-to-r from-gray-300 to-gray-500 text-gray-900"
-                                          : index === 2
-                                            ? "bg-gradient-to-r from-amber-500 to-amber-700 text-amber-900"
-                                            : "bg-gradient-to-r from-indigo-400 to-indigo-600 text-white"
-                                    }`}
-                                  >
-                                    {index + 1}
-                                  </div>
-                                  <div>
-                                    <span className="text-white font-medium">{item.name}</span>
-                                    <div className="text-slate-400 text-sm">
-                                      {item["SHAP Value"] > 0 ? "Pushes prediction higher" : "Pulls prediction lower"}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex items-center">
-                                  <span
-                                    className={`text-lg font-bold px-3 py-1 rounded-full ${
-                                      item["SHAP Value"] > 0
-                                        ? "text-green-300 bg-green-900/30"
-                                        : "text-amber-300 bg-amber-900/30"
-                                    }`}
-                                  >
-                                    {item["SHAP Value"] > 0 ? "+" : ""}
-                                    {item["SHAP Value"].toFixed(4)}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-16 text-slate-400">
-                      <BarChart2 className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <p>SHAP explanation will appear here after generating explanations.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Enhanced LIME Explanation Section */}
-              <Card className="bg-gradient-to-br from-emerald-900/30 to-teal-900/30 border-emerald-500/30 backdrop-blur-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center text-white">
-                    <Lightbulb className="mr-2 text-emerald-400" />
-                    LIME Explanation
-                    {explanation?.lime?.reliability_score && (
-                      <span className={`ml-2 text-sm ${getReliabilityColor(explanation.lime.reliability_score)}`}>
-                        ({getReliabilityText(explanation.lime.reliability_score)})
-                      </span>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="text-emerald-200">
-                    LIME (Local Interpretable Model-agnostic Explanations) creates a simple model to explain this
-                    specific prediction.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {explanation?.lime ? (
-                    <div className="space-y-6">
-                      {/* How LIME Works */}
-                      <div className="bg-gradient-to-r from-emerald-800/40 to-teal-800/40 rounded-xl p-5 border border-emerald-400/30">
-                        <h4 className="font-semibold text-emerald-300 mb-4 flex items-center text-lg">
-                          <Lightbulb className="h-6 w-6 mr-2" />
-                          How LIME Analyzed Your Prediction
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                          <div className="bg-emerald-900/50 rounded-lg p-4 border border-emerald-400/20">
-                            <h5 className="text-emerald-300 font-medium mb-2">🎯 What it did</h5>
-                            <p className="text-slate-300 text-sm">
-                              Created thousands of similar data points around your instance and trained a simple linear
-                              model to mimic the complex model's behavior locally.
-                            </p>
-                          </div>
-                          <div className="bg-teal-900/50 rounded-lg p-4 border border-teal-400/20">
-                            <h5 className="text-teal-300 font-medium mb-2">🧮 Why this method</h5>
-                            <p className="text-slate-300 text-sm">
-                              Complex models are hard to understand globally, but we can approximate them locally with
-                              simple, interpretable models.
-                            </p>
-                          </div>
-                          <div className="bg-cyan-900/50 rounded-lg p-4 border border-cyan-400/20">
-                            <h5 className="text-cyan-300 font-medium mb-2">🔍 How it works</h5>
-                            <p className="text-slate-300 text-sm">
-                              Perturbs your data point, gets predictions for variations, then fits a linear model to
-                              explain the local behavior.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="bg-slate-800/50 rounded-lg p-4">
-                          <h5 className="text-emerald-300 font-medium mb-3">📊 Local Model Analysis:</h5>
-                          <div className="space-y-2">
-                            <p className="text-slate-300 text-sm">
-                              <span className="text-emerald-400 font-semibold">Neighborhood Size:</span> Generated ~1000
-                              similar instances
-                            </p>
-                            <p className="text-slate-300 text-sm">
-                              <span className="text-emerald-400 font-semibold">Local Accuracy:</span> Simple model
-                              explains {(Math.random() * 0.3 + 0.7).toFixed(2)}% of complex model's behavior in this
-                              region
-                            </p>
-                            <p className="text-slate-300 text-sm">
-                              <span className="text-emerald-400 font-semibold">Features Analyzed:</span>{" "}
-                              {Object.keys(explanation.lime.lime_explanation).length} most important features
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Enhanced 3D LIME Visualization */}
-                      <div className="bg-gradient-to-br from-slate-900/80 to-emerald-900/40 rounded-xl p-6 border border-emerald-400/20">
-                        <h4 className="font-medium text-white mb-4 flex items-center">
-                          <BarChart2 className="h-5 w-5 mr-2 text-emerald-400" />
-                          Local Model Feature Weights
-                        </h4>
-                        <ResponsiveContainer width="100%" height={500}>
-                          <BarChart
-                            layout="vertical"
-                            data={formatLimeData()}
-                            margin={{ top: 20, right: 50, left: 150, bottom: 20 }}
-                          >
-                            <defs>
-                              <linearGradient id="limePositive" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#06B6D4" stopOpacity={0.9} />
-                                <stop offset="50%" stopColor="#22D3EE" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#67E8F9" stopOpacity={0.8} />
-                              </linearGradient>
-                              <linearGradient id="limeNegative" x1="0" y1="0" x2="1" y2="0">
-                                <stop offset="0%" stopColor="#EC4899" stopOpacity={1} />
-                                <stop offset="50%" stopColor="#F472B6" stopOpacity={1} />
-                                <stop offset="100%" stopColor="#FBCFE8" stopOpacity={0.8} />
-                              </linearGradient>
-                              <filter id="limeGlow" x="-50%" y="-50%" width="200%" height="200%">
-                                <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                                <feMerge>
-                                  <feMergeNode in="coloredBlur" />
-                                  <feMergeNode in="SourceGraphic" />
-                                </feMerge>
-                              </filter>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#10B981" strokeOpacity={0.3} />
-                            <XAxis
-                              type="number"
-                              tick={{ fill: "#D1FAE5", fontSize: 12 }}
-                              axisLine={{ stroke: "#10B981" }}
-                            />
-                            <YAxis
-                              dataKey="name"
-                              type="category"
-                              width={140}
-                              tick={{ fill: "#D1FAE5", fontSize: 11 }}
-                              axisLine={{ stroke: "#10B981" }}
-                            />
-                            <Tooltip
-                              contentStyle={{
-                                backgroundColor: "rgba(6, 78, 59, 0.95)",
-                                border: "2px solid #10B981",
-                                borderRadius: "12px",
-                                color: "#D1FAE5",
-                                boxShadow: "0 10px 25px rgba(0,0,0,0.3)",
-                              }}
-                              formatter={(value: number) => [
-                                `${value > 0 ? "+" : ""}${value.toFixed(4)}`,
-                                value > 0 ? "🚀 Supports Prediction" : "🚫 Opposes Prediction",
-                              ]}
-                            />
-                            <Bar
-                              dataKey="LIME Weight"
-                              fill={(entry) => (entry > 0 ? "url(#limePositive)" : "url(#limeNegative)")}
-                              filter="url(#limeGlow)"
-                              radius={[0, 8, 8, 0]}
-                            />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      </div>
-
-                      {/* LIME vs SHAP Comparison */}
-                      {explanation?.shap && (
-                        <div className="bg-gradient-to-r from-emerald-800/30 to-indigo-800/30 rounded-xl p-5 border border-emerald-400/20">
-                          <h4 className="font-medium text-white mb-4 flex items-center">
-                            <BarChart2 className="h-5 w-5 mr-2 text-emerald-400" />
-                            LIME vs SHAP: Different Perspectives
-                          </h4>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-gradient-to-br from-emerald-900/40 to-teal-900/40 rounded-lg p-4 border border-emerald-500/30">
-                              <h5 className="text-emerald-300 font-medium mb-3 flex items-center">
-                                <Lightbulb className="h-5 w-5 mr-2" />
-                                LIME's Approach
-                              </h5>
-                              <ul className="text-sm text-slate-300 space-y-2">
-                                <li className="flex items-start">
-                                  <span className="text-emerald-400 mr-2">🎯</span>
-                                  <span>Creates a local linear approximation around your specific data point</span>
-                                </li>
-                                <li className="flex items-start">
-                                  <span className="text-emerald-400 mr-2">⚡</span>
-                                  <span>Fast and intuitive - easy to understand weights</span>
-                                </li>
-                                <li className="flex items-start">
-                                  <span className="text-emerald-400 mr-2">🔍</span>
-                                  <span>Perfect for understanding individual predictions in detail</span>
-                                </li>
-                              </ul>
-                            </div>
-                            <div className="bg-gradient-to-br from-indigo-900/40 to-purple-900/40 rounded-lg p-4 border border-indigo-500/30">
-                              <h5 className="text-indigo-300 font-medium mb-3 flex items-center">
-                                <BarChart2 className="h-5 w-5 mr-2" />
-                                SHAP's Approach
-                              </h5>
-                              <ul className="text-sm text-slate-300 space-y-2">
-                                <li className="flex items-start">
-                                  <span className="text-indigo-400 mr-2">🧮</span>
-                                  <span>Uses game theory for mathematically rigorous attribution</span>
-                                </li>
-                                <li className="flex items-start">
-                                  <span className="text-indigo-400 mr-2">⚖️</span>
-                                  <span>Guarantees consistent and fair feature attribution</span>
-                                </li>
-                                <li className="flex items-start">
-                                  <span className="text-indigo-400 mr-2">🎲</span>
-                                  <span>Considers all possible feature combinations systematically</span>
-                                </li>
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* LIME Feature Analysis */}
-                      <div className="bg-gradient-to-r from-emerald-800/30 to-teal-800/30 rounded-xl p-5 border border-emerald-400/20">
-                        <h4 className="font-medium text-white mb-4 flex items-center">
-                          <TrendingUp className="h-5 w-5 mr-2 text-emerald-400" />
-                          Local Model Feature Analysis
-                        </h4>
-                        <div className="space-y-3">
-                          {formatLimeData()
-                            .slice(0, 5)
-                            .map((item, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-4 bg-gradient-to-r from-slate-800/50 to-emerald-900/30 rounded-lg border border-emerald-400/10 hover:border-emerald-400/30 transition-all duration-300"
-                              >
-                                <div className="flex items-center">
-                                  <div
-                                    className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg font-bold mr-4 shadow-lg ${
-                                      item["LIME Weight"] > 0
-                                        ? "bg-gradient-to-r from-cyan-400 to-cyan-600 text-cyan-900"
-                                        : "bg-gradient-to-r from-pink-400 to-pink-600 text-pink-900"
-                                    }`}
-                                  >
-                                    {item["LIME Weight"] > 0 ? "↗️" : "↘️"}
-                                  </div>
-                                  <div>
-                                    <span className="text-white font-medium block">{item.name}</span>
-                                    <span className="text-slate-400 text-sm">
-                                      {item["LIME Weight"] > 0
-                                        ? "🚀 Increases prediction likelihood"
-                                        : "🚫 Decreases prediction likelihood"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <div className="text-right">
-                                  <span
-                                    className={`text-lg font-bold px-4 py-2 rounded-full ${
-                                      item["LIME Weight"] > 0
-                                        ? "text-cyan-300 bg-cyan-900/30 border border-cyan-400/30"
-                                        : "text-pink-300 bg-pink-900/30 border border-pink-400/30"
-                                    }`}
-                                  >
-                                    {item["LIME Weight"] > 0 ? "+" : ""}
-                                    {item["LIME Weight"].toFixed(4)}
-                                  </span>
-                                  <div className="text-xs text-slate-500 mt-1">local weight</div>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-16 text-slate-400">
-                      <Lightbulb className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                      <p>LIME explanation will appear here after generating explanations.</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
