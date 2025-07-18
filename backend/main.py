@@ -4,12 +4,24 @@ import logging
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
-
-# Add the project root to the Python path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 from models import TrainRequest, ExplainRequest, FeedbackRequest
 import services
+import os
+import sys
+import logging
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.concurrency import run_in_threadpool
+import traceback
+from models import TrainRequest, ExplainRequest, FeedbackRequest
+import services
+import uvicorn
+
+
+# Add the projectroot to the Python path
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -77,21 +89,15 @@ def read_root():
     return {"message": "Welcome to the Interactive XAI Platform API"}
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-import os
-import sys
-import logging
-from fastapi import FastAPI, File, UploadFile, HTTPException, Form
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.concurrency import run_in_threadpool
-import traceback
+     
+    
+
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import TrainRequest, ExplainRequest, FeedbackRequest
-import services
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -161,5 +167,4 @@ def read_root():
     return {"message": "Welcome to the Interactive XAI Platform API"}
 
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

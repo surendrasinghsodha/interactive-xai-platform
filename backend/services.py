@@ -520,7 +520,7 @@ def explain_model_service(request: ExplainRequest):
         # Calculate overall reliability
         overall_reliability = calculate_reliability_score(request.model_id, "both")
         
-        # Store explanation with unique ID
+        # Store explanation with unique ID 
         explanation_id = str(uuid.uuid4())
         EXPLANATION_CACHE[explanation_id] = {
             "model_id": request.model_id,
@@ -593,7 +593,7 @@ def handle_feedback_service(request: FeedbackRequest):
         logger.info(f"Feedback received for model {request.model_id}: Rating {request.rating}, Updated reliability: {updated_reliability}")
         
         return {
-            "message": "Feedback received successfully. Explanation parameters have been updated based on your input.",
+            "message": "Feedback has been received successfully. Explanation parameters have been updated according to your input",
             "updated_reliability": updated_reliability,
             "improvement_suggestions": suggestions
         }
