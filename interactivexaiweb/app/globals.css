@@ -71,6 +71,19 @@
   }
 }
 
+/* Enhanced text shadows for better readability */
+.text-shadow-sm {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8), 0 0 4px rgba(0, 0, 0, 0.6);
+}
+
+.text-shadow-md {
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9), 0 0 8px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 0, 0, 0.5);
+}
+
+.text-shadow-lg {
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 1), 0 0 16px rgba(0, 0, 0, 0.8), 0 0 32px rgba(0, 0, 0, 0.6);
+}
+
 /* High-quality cinematic animations */
 @keyframes float {
   0%,
@@ -184,22 +197,22 @@
   animation: stellar-drift 20s ease-in-out infinite;
 }
 
-/* High-quality glass morphism */
+/* Enhanced glass morphism with better contrast */
 .glass-card {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(20px) saturate(1.8) brightness(1.2);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 0 0 1px
-    rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .glass-card:hover {
-  background: rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 0 0 1px
+    rgba(255, 255, 255, 0.15);
 }
 
-/* Enhanced backdrop blur */
+/* Enhanced backdrop blur with better readability */
 .backdrop-blur-sm {
   backdrop-filter: blur(8px) saturate(1.4) brightness(1.1);
 }
@@ -210,6 +223,14 @@
 
 .backdrop-blur-lg {
   backdrop-filter: blur(24px) saturate(1.8) brightness(1.3);
+}
+
+/* Enhanced card backgrounds for better text contrast */
+.card-enhanced {
+  background: rgba(15, 23, 42, 0.85);
+  backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 /* Cinematic drop shadows */
@@ -273,13 +294,19 @@ html {
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .backdrop-blur-md {
-    background: rgba(0, 0, 0, 0.9);
+    background: rgba(0, 0, 0, 0.95);
     backdrop-filter: none;
   }
 
   .glass-card {
-    background: rgba(0, 0, 0, 0.8);
-    border: 2px solid rgba(255, 255, 255, 0.8);
+    background: rgba(0, 0, 0, 0.9);
+    border: 2px solid rgba(255, 255, 255, 0.9);
+  }
+
+  .text-shadow-sm,
+  .text-shadow-md,
+  .text-shadow-lg {
+    text-shadow: 0 0 0 transparent;
   }
 }
 
@@ -314,4 +341,39 @@ html {
   .stellar-drift {
     animation-duration: 30s;
   }
+}
+
+/* Enhanced accessibility for screen readers */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus indicators for keyboard navigation */
+.focus-visible:focus {
+  outline: 2px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+/* Enhanced button and interactive element styling */
+.interactive-element {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.interactive-element:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 255, 255, 0.1);
+}
+
+.interactive-element:active {
+  transform: translateY(0);
+  transition-duration: 0.1s;
 }
