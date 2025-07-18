@@ -19,15 +19,15 @@ export default function Navigation() {
   ]
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-md border-b border-white/10">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/40 backdrop-blur-md border-b border-white/20 shadow-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg shadow-blue-500/25">
               <Brain className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-white group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:to-purple-500 group-hover:bg-clip-text transition-all duration-300">
+            <span className="text-xl font-bold text-white group-hover:text-transparent group-hover:bg-gradient-to-r group-hover:from-blue-400 group-hover:to-purple-500 group-hover:bg-clip-text transition-all duration-300 drop-shadow-lg text-shadow-md">
               InterWeb-XAI
             </span>
           </Link>
@@ -39,7 +39,7 @@ export default function Navigation() {
                 key={item.href}
                 asChild
                 variant="ghost"
-                className="text-white hover:text-blue-400 hover:bg-white/10 transition-all duration-300"
+                className="text-white hover:text-blue-400 hover:bg-white/20 transition-all duration-300 backdrop-blur-sm interactive-element text-shadow-sm"
               >
                 <Link href={item.href} className="flex items-center space-x-2">
                   <item.icon className="h-4 w-4" />
@@ -53,18 +53,22 @@ export default function Navigation() {
           <div className="md:hidden">
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:text-blue-400 hover:bg-white/10">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-white hover:text-blue-400 hover:bg-white/20 backdrop-blur-sm"
+                >
                   <Menu className="h-6 w-6" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="bg-black/90 backdrop-blur-md border-white/20">
+              <SheetContent side="right" className="bg-black/95 backdrop-blur-md border-white/20">
                 <div className="flex flex-col space-y-4 mt-8">
                   {navItems.map((item) => (
                     <Button
                       key={item.href}
                       asChild
                       variant="ghost"
-                      className="justify-start text-white hover:text-blue-400 hover:bg-white/10 transition-all duration-300"
+                      className="justify-start text-white hover:text-blue-400 hover:bg-white/20 transition-all duration-300 text-shadow-sm"
                       onClick={() => setIsOpen(false)}
                     >
                       <Link href={item.href} className="flex items-center space-x-3">
