@@ -178,7 +178,7 @@
 }
 
 .animate-float-card {
-  animation: float-card 16s ease-in-out infinite;
+  /* Animation removed - tiles are now static */
 }
 
 .animate-gradient-x {
@@ -194,7 +194,7 @@
 }
 
 .stellar-drift {
-  animation: stellar-drift 20s ease-in-out infinite;
+  /* Animation removed - tiles are now static */
 }
 
 /* Enhanced glass morphism with better contrast */
@@ -285,10 +285,7 @@ html {
 }
 
 .gpu-accelerated {
-  transform: translateZ(0);
-  will-change: transform;
-  backface-visibility: hidden;
-  perspective: 1000px;
+  /* Remove transform effects for tiles */
 }
 
 /* High contrast mode support */
