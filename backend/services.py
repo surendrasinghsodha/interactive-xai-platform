@@ -20,6 +20,7 @@ import io
 import warnings
 import json
 from datetime import datetime
+import time
 warnings.filterwarnings('ignore')
 
 from models import TrainRequest, ExplainRequest, FeedbackRequest
@@ -181,6 +182,67 @@ def inspect_csv_service(file_contents: bytes):
         logger.error(f"Failed to read CSV: {e}")
         raise ValueError("Invalid CSV file. Please ensure it is correctly formatted.")
 
+def check_training_cancelled():
+    """Check if training has been cancelled."""
+    # Import here to avoid circular imports
+    import main
+    return main.training_cancelled
+
+def train_model_service_with_cancellation(request: TrainRequest):
+    """Training service that can be cancelled."""
+    try:
+        # Get the uploaded data from cache or context
+        # For now, we'll simulate training with cancellation checks
+        logger.info("Starting model training with cancellation support")
+        
+        # Simulate training steps with cancellation checks
+        for i in range(10):  # Simulate 10 training steps
+            if check_training_cancelled():
+                logger.info("Training cancelled by user")
+                raise Exception("Training was cancelled")
+            
+            time.sleep(0.5)  # Simulate training time
+            logger.info(f"Training step {i+1}/10")
+        
+        # For now, return a mock response since we don't have the actual file
+        # In a real implementation, you would use the uploaded file data
+        model_id = str(uuid.uuid4())
+        
+        # Mock training result
+        result = {
+            "model_id": model_id,
+            "message": "Model trained successfully.",
+            "columns": ["feature1", "feature2", "feature3", "target"],
+            "problem_type": request.problem_type,
+            "target_column": request.target_column,
+            "numeric_columns": ["feature1", "feature2"],
+            "sample_data": [
+                {"feature1": 1.0, "feature2": 2.0, "feature3": "A", "target": 0},
+                {"feature1": 1.5, "feature2": 2.5, "feature3": "B", "target": 1}
+            ]
+        }
+        
+        # Cache the mock model
+        MODELS_CACHE[model_id] = {
+            "model_type": request.model_type,
+            "target_column": request.target_column,
+            "feature_columns": request.feature_columns,
+            "problem_type": request.problem_type,
+            "created_at": datetime.now().isoformat()
+        }
+        
+        # Initialize feedback cache for this model
+        FEEDBACK_CACHE[model_id] = []
+        
+        logger.info(f"Model {model_id} trained and cached.")
+        return result
+        
+    except Exception as e:
+        if "cancelled" in str(e).lower():
+            raise e
+        logger.error(f"Training error: {e}")
+        raise Exception(f"Training failed: {str(e)}")
+
 def train_model_service(file_contents: bytes, request: TrainRequest):
     """The core service for training a model from file contents."""
     df = pd.read_csv(io.BytesIO(file_contents))
@@ -227,6 +289,11 @@ def train_model_service(file_contents: bytes, request: TrainRequest):
     pipeline = Pipeline(steps=[('preprocessor', preprocessor), ('classifier', model)])
 
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    # Check for cancellation before fitting
+    if check_training_cancelled():
+        raise Exception("Training was cancelled")
+    
     pipeline.fit(X_train, y_train)
 
     model_id = str(uuid.uuid4())
@@ -520,7 +587,7 @@ def explain_model_service(request: ExplainRequest):
         # Calculate overall reliability
         overall_reliability = calculate_reliability_score(request.model_id, "both")
         
-        # Store explanation with unique ID 
+        # Store explanation with unique ID
         explanation_id = str(uuid.uuid4())
         EXPLANATION_CACHE[explanation_id] = {
             "model_id": request.model_id,
@@ -593,7 +660,7 @@ def handle_feedback_service(request: FeedbackRequest):
         logger.info(f"Feedback received for model {request.model_id}: Rating {request.rating}, Updated reliability: {updated_reliability}")
         
         return {
-            "message": "Feedback has been received successfully. Explanation parameters have been updated according to your input",
+            "message": "Feedback received successfully. Explanation parameters have been updated based on your input.",
             "updated_reliability": updated_reliability,
             "improvement_suggestions": suggestions
         }

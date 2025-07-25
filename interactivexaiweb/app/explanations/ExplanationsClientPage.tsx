@@ -654,11 +654,11 @@ export default function ExplanationsClientPage() {
   ]
 
   const handleFeedbackSubmit = async () => {
-    if (!explanationId) {
+    if (!trainResponse) {
       toast({
         variant: "destructive",
-        title: "No Explanation ID",
-        description: "Cannot submit feedback without an explanation.",
+        title: "No Model Found",
+        description: "Cannot submit feedback without a trained model.",
       })
       return
     }
@@ -669,6 +669,7 @@ export default function ExplanationsClientPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          model_id: trainResponse.model_id,
           explanation_id: explanationId,
           rating: rating,
           comment: comment,
