@@ -44,7 +44,13 @@ async def upload_data_endpoint(file: UploadFile = File(...)):
     try:
         logger.info(f"Uploading file: {file.filename}")
         contents = await file.read()
-        return await run_in_threadpool(services.inspect_csv_service, contents)
+        result = await run_in_threadpool(services.inspect_csv_service, contents)
+        
+        # Cache the cleaned data for training
+        df = services.clean_dataset(services.pd.read_csv(services.io.BytesIO(contents)))
+        services.cache_uploaded_data(df)
+        
+        return result
     except Exception as e:
         logger.error(f"Error during data upload: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
