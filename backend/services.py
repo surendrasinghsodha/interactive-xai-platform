@@ -243,8 +243,10 @@ def train_model_service(file_contents: bytes, request: TrainRequest):
         "target_column": request.target_column,
         "preprocessor": preprocessor,
         "model": model,
-        "original_data": df,
-        "created_at": datetime.now().isoformat()
+        "original_data": df,             # ⬅️ already present
+        "created_at": datetime.now().isoformat(),
+        "original_file": file_contents,  # ⬅️ ADD THIS LINE
+        "random_state": 42               # ⬅️ ADD THIS TOO IF NOT PRESENT
     }
     
     # Initialize feedback cache for this model
@@ -567,6 +569,8 @@ def handle_feedback_service(request: FeedbackRequest):
         if request.model_id not in MODELS_CACHE:
             raise ValueError("Model not found")
         
+        model_data = MODELS_CACHE[request.model_id]
+
         # Store feedback
         feedback_entry = {
             "rating": request.rating,
@@ -575,29 +579,66 @@ def handle_feedback_service(request: FeedbackRequest):
             "explanation_id": request.explanation_id,
             "timestamp": datetime.now().isoformat()
         }
-        
+
         if request.model_id not in FEEDBACK_CACHE:
             FEEDBACK_CACHE[request.model_id] = []
-        
+
         FEEDBACK_CACHE[request.model_id].append(feedback_entry)
-        
+
+        # ⚠️ Retrain logic only if rating is 1–3
+        if request.rating <= 3:
+            import random
+            new_random_state = random.randint(1, 10000)
+            print(f"🔁 Retraining model due to low feedback. New random_state = {new_random_state}")
+
+            # Extract info
+            file_contents = model_data["original_file"]
+            model_type = model_data["model"].__class__.__name__.lower().replace("classifier", "").replace("regressor", "")
+            target_column = model_data["target_column"]
+
+            # Map actual model type string to expected format
+            model_type_mapping = {
+                "randomforest": "random_forest",
+                "decisiontree": "decision_tree",
+                "logistic": "logistic_regression",
+                "svm": "svm",
+                "linear": "linear_regression"
+            }
+
+            model_type_str = model_type_mapping.get(model_type, model_type)
+
+            # Use TrainRequest with same model_type and target_column
+            new_request = TrainRequest(model_type=model_type_str, target_column=target_column)
+
+            # Retrain model (override random_state in function)
+            result = train_model_service(file_contents, new_request)
+
+            # Override the model_id’s cache with new one
+            MODELS_CACHE[request.model_id] = MODELS_CACHE[result["model_id"]]
+            MODELS_CACHE[request.model_id]["random_state"] = new_random_state
+            MODELS_CACHE[request.model_id]["model_id"] = request.model_id  # keep original ID
+            print(f"✅ Model re-trained and replaced in cache for ID: {request.model_id}")
+
         # Calculate updated reliability score
         updated_reliability = calculate_reliability_score(request.model_id, request.explanation_type)
-        
+
         # Get improvement suggestions
         all_feedback = FEEDBACK_CACHE[request.model_id]
         avg_rating = sum(f['rating'] for f in all_feedback) / len(all_feedback)
         comments = [f['comment'] for f in all_feedback if f['comment']]
         suggestions = get_improvement_suggestions(avg_rating, comments)
-        
-        logger.info(f"Feedback received for model {request.model_id}: Rating {request.rating}, Updated reliability: {updated_reliability}")
-        
+
+        logger.info(f"Feedback processed for model {request.model_id}: Rating {request.rating}, Updated reliability: {updated_reliability}")
+
         return {
-            "message": "Feedback has been received successfully. Explanation parameters have been updated according to your input",
+            "message": "Feedback has been received successfully. Explanation parameters have been updated according to your input.",
             "updated_reliability": updated_reliability,
             "improvement_suggestions": suggestions
         }
-        
+
     except Exception as e:
         logger.error(f"Error processing feedback: {e}")
         raise ValueError(f"Could not process feedback: {str(e)}")
+        raise ValueError(f"Could not process feedback: {str(e)}")
+
+
