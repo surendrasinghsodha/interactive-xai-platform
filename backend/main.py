@@ -1,26 +1,25 @@
 import os
 import sys
 import logging
+import traceback
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
-import traceback
-import asyncio
+from models import TrainRequest, ExplainRequest, FeedbackRequest
+import services
+import uvicorn
 
 # Add the project root to the Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from models import TrainRequest, ExplainRequest, FeedbackRequest
-import services
-
+# Logging setup
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# FastAPI app setup
 app = FastAPI(title="Interactive XAI Platform API", version="1.0.0")
 
-# Global variable to track training cancellation
-training_cancelled = False
-
+# Enable CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,6 +28,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Routes
 @app.post("/inspect-csv")
 async def inspect_csv_endpoint(file: UploadFile = File(...)):
     try:
@@ -39,64 +39,22 @@ async def inspect_csv_endpoint(file: UploadFile = File(...)):
         logger.error(f"Error during CSV inspection: {e}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/upload-data")
-async def upload_data_endpoint(file: UploadFile = File(...)):
-    try:
-        logger.info(f"Uploading file: {file.filename}")
-        contents = await file.read()
-        result = await run_in_threadpool(services.inspect_csv_service, contents)
-        
-        # Cache the cleaned data for training
-        df = services.clean_dataset(services.pd.read_csv(services.io.BytesIO(contents)))
-        services.cache_uploaded_data(df)
-        
-        return result
-    except Exception as e:
-        logger.error(f"Error during data upload: {e}", exc_info=True)
-        raise HTTPException(status_code=400, detail=str(e))
-
 @app.post("/train")
-async def train_model_endpoint(request: dict):
-    global training_cancelled
-    training_cancelled = False
-    
+async def train_model_endpoint(
+    file: UploadFile = File(...),
+    model_type: str = Form(...),
+    target_column: str = Form(...),
+):
     try:
-        logger.info(f"Training request: {request}")
-        
-        # Create TrainRequest object from the request data
-        train_request = TrainRequest(
-            model_type=request.get("model_type"),
-            target_column=request.get("target_column"),
-            feature_columns=request.get("feature_columns", []),
-            problem_type=request.get("problem_type", "classification")
-        )
-        
-        result = await run_in_threadpool(services.train_model_service_with_cancellation, train_request)
-        
-        if training_cancelled:
-            raise HTTPException(status_code=499, detail="Training was cancelled")
-            
+        logger.info(f"Training request: model={model_type}, target={target_column}")
+        contents = await file.read()
+        train_request = TrainRequest(model_type=model_type, target_column=target_column)
+        result = await run_in_threadpool(services.train_model_service, contents, train_request)
         logger.info(f"Training successful. Model ID: {result['model_id']}")
         return result
-    except HTTPException:
-        raise
     except Exception as e:
         logger.error(f"Error during model training: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Training failed: {str(e)}")
-
-@app.post("/cancel-training")
-async def cancel_training_endpoint(request: dict):
-    global training_cancelled
-    try:
-        if request.get("action") == "cancel":
-            training_cancelled = True
-            logger.info("Training cancellation requested")
-            return {"message": "Training cancellation requested"}
-        else:
-            raise HTTPException(status_code=400, detail="Invalid action")
-    except Exception as e:
-        logger.error(f"Error during training cancellation: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/explain")
 async def explain_model_endpoint(request: ExplainRequest):
@@ -116,6 +74,7 @@ async def feedback_endpoint(request: FeedbackRequest):
     try:
         logger.info(f"Feedback received for model ID: {request.model_id}")
         response = await run_in_threadpool(services.handle_feedback_service, request)
+        print(f"+++++++  ,,, Feedback processed successfully: {response}")
         return response
     except Exception as e:
         logger.error(f"Error processing feedback: {e}", exc_info=True)
@@ -125,6 +84,6 @@ async def feedback_endpoint(request: FeedbackRequest):
 def read_root():
     return {"message": "Welcome to the Interactive XAI Platform API"}
 
+# Start the app
 if __name__ == "__main__":
-    import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
