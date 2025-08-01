@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useContext, useState } from "react"
+import { useContext } from "react"
 import { AppContext } from "@/context/AppContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -51,7 +51,6 @@ export default function DashboardPage() {
     setIsTraining,
   } = useContext(AppContext)
 
-  const [isCancelling, setIsCancelling] = useState(false)
   const { toast } = useToast()
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -125,37 +124,12 @@ export default function DashboardPage() {
       setTrainResponse(data)
       toast({ title: "Training Complete", description: `Model ${data.model_id} is ready.` })
     } catch (error: any) {
-      if (error.message.includes("cancelled")) {
-        toast({ title: "Training Cancelled", description: "Model training was cancelled." })
-      } else {
-        toast({ variant: "destructive", title: "Training Failed", description: error.message })
-      }
+      toast({ variant: "destructive", title: "Training Failed", description: error.message })
     } finally {
       clearInterval(progressInterval)
       setTrainingProgress(100)
       setIsTraining(false)
       setTimeout(() => setTrainingProgress(0), 2000)
-    }
-  }
-
-  const handleCancelTraining = async () => {
-    setIsCancelling(true)
-    try {
-      const res = await fetch("http://127.0.0.1:8000/cancel-training", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cancel" }),
-      })
-
-      if (res.ok) {
-        setIsTraining(false)
-        setTrainingProgress(0)
-        toast({ title: "Training Cancelled", description: "Model training has been cancelled." })
-      }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Cancel Failed", description: "Could not cancel training." })
-    } finally {
-      setIsCancelling(false)
     }
   }
 
@@ -283,26 +257,10 @@ export default function DashboardPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleTrainModel}
-                disabled={isTraining || !uploadResponse || !selectedModel}
-                className="flex-1"
-              >
-                {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                Train Model
-              </Button>
-              {isTraining && (
-                <Button
-                  variant="outline"
-                  onClick={handleCancelTraining}
-                  disabled={isCancelling}
-                  className="px-3 bg-transparent"
-                >
-                  {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : "Cancel"}
-                </Button>
-              )}
-            </div>
+            <Button onClick={handleTrainModel} disabled={isTraining || !uploadResponse || !selectedModel}>
+              {isTraining ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Train Model
+            </Button>
             {isTraining && <Progress value={trainingProgress} className="w-full mt-2" />}
           </CardContent>
         </Card>

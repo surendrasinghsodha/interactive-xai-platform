@@ -1,38 +1,12 @@
 "use client"
 
-import { createContext, useState, type ReactNode } from "react"
-import type { UploadResponse, TrainResponse, Explanation } from "@/lib/types"
+import type React from "react"
+import { createContext, useState, useContext, useMemo } from "react"
+import type { AppContextType, UploadResponse, TrainResponse, Explanation } from "@/lib/types"
 
-export interface AppContextType {
-  file: File | null
-  setFile: (file: File | null) => void
-  isLoading: boolean
-  setIsLoading: (isLoading: boolean) => void
-  isTraining: boolean
-  setIsTraining: (isTraining: boolean) => void
-  trainingProgress: number
-  setTrainingProgress: (trainingProgress: number) => void
-  uploadResponse: UploadResponse | null
-  setUploadResponse: (uploadResponse: UploadResponse | null) => void
-  trainResponse: TrainResponse | null
-  setTrainResponse: (trainResponse: TrainResponse | null) => void
-  explanation: Explanation | null
-  setExplanation: (explanation: Explanation | null) => void
-  selectedModel: string
-  setSelectedModel: (selectedModel: string) => void
-  targetColumn: string
-  setTargetColumn: (targetColumn: string) => void
-  featureColumns: string[]
-  setFeatureColumns: (featureColumns: string[]) => void
-  problemType: "classification" | "regression"
-  setProblemType: (problemType: "classification" | "regression") => void
-  selectedRow: Record<string, any> | null
-  setSelectedRow: (selectedRow: Record<string, any> | null) => void
-}
+export const AppContext = createContext<AppContextType | null>(null)
 
-export const AppContext = createContext<AppContextType>(null!)
-
-export const AppProvider = ({ children }: { children: ReactNode }) => {
+export function AppProvider({ children }: { children: React.ReactNode }) {
   const [file, setFile] = useState<File | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [isTraining, setIsTraining] = useState<boolean>(false)
@@ -40,38 +14,62 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [uploadResponse, setUploadResponse] = useState<UploadResponse | null>(null)
   const [trainResponse, setTrainResponse] = useState<TrainResponse | null>(null)
   const [explanation, setExplanation] = useState<Explanation | null>(null)
-  const [selectedModel, setSelectedModel] = useState<string>("")
-  const [targetColumn, setTargetColumn] = useState<string>("")
+  const [selectedModel, setSelectedModel] = useState<string | null>(null)
+  const [targetColumn, setTargetColumn] = useState<string | null>(null)
   const [featureColumns, setFeatureColumns] = useState<string[]>([])
   const [problemType, setProblemType] = useState<"classification" | "regression">("classification")
   const [selectedRow, setSelectedRow] = useState<Record<string, any> | null>(null)
 
-  const value = {
-    file,
-    setFile,
-    isLoading,
-    setIsLoading,
-    isTraining,
-    setIsTraining,
-    trainingProgress,
-    setTrainingProgress,
-    uploadResponse,
-    setUploadResponse,
-    trainResponse,
-    setTrainResponse,
-    explanation,
-    setExplanation,
-    selectedModel,
-    setSelectedModel,
-    targetColumn,
-    setTargetColumn,
-    featureColumns,
-    setFeatureColumns,
-    problemType,
-    setProblemType,
-    selectedRow,
-    setSelectedRow,
-  }
+  const contextValue = useMemo(
+    () => ({
+      file,
+      setFile,
+      isLoading,
+      setIsLoading,
+      isTraining,
+      setIsTraining,
+      trainingProgress,
+      setTrainingProgress,
+      uploadResponse,
+      setUploadResponse,
+      trainResponse,
+      setTrainResponse,
+      explanation,
+      setExplanation,
+      selectedModel,
+      setSelectedModel,
+      targetColumn,
+      setTargetColumn,
+      featureColumns,
+      setFeatureColumns,
+      problemType,
+      setProblemType,
+      selectedRow,
+      setSelectedRow,
+    }),
+    [
+      file,
+      isLoading,
+      isTraining,
+      trainingProgress,
+      uploadResponse,
+      trainResponse,
+      explanation,
+      selectedModel,
+      targetColumn,
+      featureColumns,
+      problemType,
+      selectedRow,
+    ],
+  )
 
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>
+  return <AppContext.Provider value={contextValue}>{children}</AppContext.Provider>
+}
+
+export function useApp() {
+  const context = useContext(AppContext)
+  if (!context) {
+    throw new Error("useApp must be used within an AppProvider")
+  }
+  return context
 }
