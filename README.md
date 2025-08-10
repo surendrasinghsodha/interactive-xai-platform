@@ -141,3 +141,10 @@ npm run dev
 **ML Support:** Classification & Regression tasks
 
 ---
+📞 Contact
+Interactive XAI Platform is developed by a passionate team. Reach out via GitHub or LinkedIn:
+Sagar Shankar: Project Manager & XAI Developer
+Surendrasingh Sodha: Scrum Master & Documentation Lead
+Sinem Taskin: UX Designer
+Galeesha Babu Shaik: GitHub Manager
+For details on each team member, visit the Team Page in the platform.
