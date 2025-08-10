@@ -1,34 +1,49 @@
 "use client"
 
 import type React from "react"
-import { useContext, useState, useCallback } from "react"
-import { AppContext } from "@/context/AppContext"
+import { useCallback } from "react"
+import { useApp } from "@/context/AppContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Upload, FileText, CheckCircle, Database, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import PageHeader from "@/components/page-header"
 import PageNavigation from "@/components/page-navigation"
 import { useDropzone } from "react-dropzone"
-import { FileIcon } from "lucide-react"
+import SpaceBackground from "@/components/space-background"
 
 export default function UploadPage() {
-  const { file, setFile, isLoading, setIsLoading, uploadResponse, setUploadResponse } = useContext(AppContext)
+  const { file, setFile, isLoading, setIsLoading, uploadResponse, setUploadResponse } = useApp()
   const { toast } = useToast()
-  const [files, setFiles] = useState<File[]>([])
-  const [uploading, setUploading] = useState(false)
 
   const breadcrumbs = [{ label: "Upload Data", href: "/upload", current: true }]
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
+    if (event.target.files && event.target.files.length > 0) {
       setFile(event.target.files[0])
       setUploadResponse(null) // Reset previous response
     }
   }
+
+  const onDrop = useCallback(
+    (acceptedFiles: File[]) => {
+      if (acceptedFiles.length > 0) {
+        setFile(acceptedFiles[0])
+        setUploadResponse(null) // Reset previous response
+      }
+    },
+    [setFile, setUploadResponse],
+  )
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "text/csv": [".csv"],
+      "application/vnd.ms-excel": [".csv"],
+    },
+    multiple: false,
+  })
 
   const handleInspect = async () => {
     if (!file) {
@@ -38,7 +53,6 @@ export default function UploadPage() {
     setIsLoading(true)
     const formData = new FormData()
     formData.append("file", file)
-
     try {
       const res = await fetch("http://127.0.0.1:8000/inspect-csv", { method: "POST", body: formData })
       if (!res.ok) {
@@ -55,43 +69,11 @@ export default function UploadPage() {
     }
   }
 
-  const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
-      setFiles((prevFiles) => [...prevFiles, ...acceptedFiles])
-      if (acceptedFiles.length > 0) {
-        setFile(acceptedFiles[0]) // Set the first file as the main file
-      }
-    },
-    [setFile],
-  )
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      "text/csv": [".csv"],
-      "application/vnd.ms-excel": [".csv"],
-    },
-    multiple: false,
-  })
-
-  const handleRemoveFile = (index: number) => {
-    setFiles((prevFiles) => prevFiles.filter((_, i) => i !== index))
-  }
-
-  const handleUpload = async () => {
-    setUploading(true)
-    // Simulate upload process
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-    setUploading(false)
-    toast({ title: "Success", description: "Files uploaded successfully!" })
-    setFiles([])
-  }
-
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
+      <SpaceBackground />
       <div className="relative z-10">
         <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-black/80 backdrop-blur-sm pointer-events-none"></div>
-
         <div className="relative z-20">
           <PageHeader
             title="Step 1: Upload & Inspect"
@@ -99,7 +81,6 @@ export default function UploadPage() {
             breadcrumbs={breadcrumbs}
             showBackButton={false}
           />
-
           <div className="max-w-4xl mx-auto px-4 py-12">
             <div className="space-y-8">
               <PageNavigation
@@ -111,7 +92,6 @@ export default function UploadPage() {
                   description: "Configure and train your model",
                 }}
               />
-
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <Card className="glass-card backdrop-blur-md shadow-2xl border-white/20 hover:bg-black/70 transition-all duration-500">
                   <CardHeader>
@@ -124,26 +104,6 @@ export default function UploadPage() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
-                    <div className="grid w-full items-center gap-1.5">
-                      <Label htmlFor="csv-file" className="text-white text-shadow-sm">
-                        Choose CSV File
-                      </Label>
-                      <Input
-                        id="csv-file"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileChange}
-                        className="bg-black/60 border-white/30 text-white backdrop-blur-sm file:bg-white/20 file:text-white file:border-0 file:rounded-md hover:bg-black/70 transition-all duration-300 text-shadow-sm"
-                      />
-                      {file && (
-                        <div className="flex items-center gap-2 mt-2 p-2 bg-blue-900/20 rounded-lg border border-blue-500/30 backdrop-blur-sm">
-                          <FileText className="h-4 w-4 text-blue-400" />
-                          <p className="text-sm text-blue-300 text-shadow-sm">Selected: {file.name}</p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Drag and Drop Area */}
                     <div
                       {...getRootProps()}
                       className={`relative border-2 border-dashed rounded-md p-6 cursor-pointer transition-colors duration-200 backdrop-blur-sm ${
@@ -163,27 +123,12 @@ export default function UploadPage() {
                       </div>
                     </div>
 
-                    {/* File List */}
-                    <div className="mt-4">
-                      {files.length > 0 && <h2 className="text-lg font-semibold mb-2 text-white">Selected Files:</h2>}
-                      {files.map((file, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between py-2 px-4 bg-black/40 rounded-md mb-2 transition-colors duration-200 hover:bg-black/60 border border-white/20"
-                        >
-                          <div className="flex items-center">
-                            <FileIcon className="text-gray-400 mr-2 h-4 w-4" />
-                            <span className="text-sm text-gray-300">{file.name}</span>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveFile(index)}
-                            className="text-red-400 hover:text-red-300 transition-colors duration-200"
-                          >
-                            ×
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                    {file && (
+                      <div className="flex items-center gap-2 mt-2 p-2 bg-blue-900/20 rounded-lg border border-blue-500/30 backdrop-blur-sm">
+                        <FileText className="h-4 w-4 text-blue-400" />
+                        <p className="text-sm text-blue-300 text-shadow-sm">Selected: {file.name}</p>
+                      </div>
+                    )}
 
                     <Button
                       onClick={handleInspect}
@@ -204,7 +149,6 @@ export default function UploadPage() {
                     </Button>
                   </CardContent>
                 </Card>
-
                 <Card className="glass-card backdrop-blur-md shadow-2xl border-white/20 hover:bg-black/70 transition-all duration-500">
                   <CardHeader>
                     <CardTitle className="flex items-center text-white text-shadow-lg">
@@ -224,7 +168,7 @@ export default function UploadPage() {
                             Columns ({uploadResponse.columns.length})
                           </h4>
                           <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                            {uploadResponse.columns.map((col, index) => (
+                            {uploadResponse.columns.map((col) => (
                               <span
                                 key={col}
                                 className="px-3 py-1 bg-slate-700/80 rounded-full text-sm text-slate-200 backdrop-blur-sm border border-white/10 hover:bg-slate-600/80 transition-all duration-300 text-shadow-sm"
