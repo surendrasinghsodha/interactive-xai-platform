@@ -143,7 +143,7 @@ npm run dev
 ---
 ## 📞 Contact  
 
-**Interactive XAI Platform** is developed by a passionate team. Reach out via GitHub or LinkedIn:
+**Interactive XAI Platform** is developed by a passionate team.
 
 - **Sagar Shankar**: Project Manager & XAI Developer  
 - **Surendrasingh Sodha**: Scrum Master & Documentation Lead  
