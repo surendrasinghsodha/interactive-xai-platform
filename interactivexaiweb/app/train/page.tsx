@@ -1,7 +1,7 @@
 "use client"
 
-import { useContext, useState, useEffect } from "react"
-import { AppContext } from "@/context/AppContext"
+import { useState, useEffect, useRef } from "react"
+import { useApp } from "@/context/AppContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -17,12 +17,13 @@ import SpaceBackground from "@/components/space-background"
 
 export default function TrainPage() {
   const { file, uploadResponse, isTraining, setIsTraining, setTrainResponse, trainingProgress, setTrainingProgress } =
-    useContext(AppContext)
+    useApp()
   const [selectedModel, setSelectedModel] = useState("")
   const [targetColumn, setTargetColumn] = useState("")
   const [isCancelling, setIsCancelling] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const abortControllerRef = useRef<AbortController | null>(null)
 
   const breadcrumbs = [
     { label: "Upload Data", href: "/upload" },
@@ -30,32 +31,24 @@ export default function TrainPage() {
   ]
 
   useEffect(() => {
-    if (!file || !uploadResponse) {
+    if (!uploadResponse) {
       toast({ variant: "destructive", title: "No data found", description: "Please upload a dataset first." })
       router.push("/upload")
     }
-  }, [file, uploadResponse, router, toast])
+  }, [uploadResponse, router, toast])
 
-  const handleCancelTraining = async () => {
-    setIsCancelling(true)
-    try {
-      const response = await fetch("http://127.0.0.1:8000/cancel-training", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cancel" }),
-      })
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort()
+    }
+  }, [])
 
-      if (response.ok) {
-        toast({ title: "Training Cancelled", description: "Model training has been cancelled." })
-        setIsTraining(false)
-        setTrainingProgress(0)
-      } else {
-        throw new Error("Failed to cancel training")
-      }
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Cancel Failed", description: error.message })
-    } finally {
-      setIsCancelling(false)
+  const handleCancelTraining = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
+      setIsTraining(false)
+      setTrainingProgress(0)
+      toast({ title: "Training Cancelled", description: "The training process has been stopped." })
     }
   }
 
@@ -73,13 +66,21 @@ export default function TrainPage() {
     setTrainingProgress(0)
     const progressInterval = setInterval(() => setTrainingProgress((p) => Math.min(p + 5, 95)), 300)
 
+    const controller = new AbortController()
+    abortControllerRef.current = controller
+
     const formData = new FormData()
     formData.append("file", file)
     formData.append("model_type", selectedModel)
     formData.append("target_column", targetColumn)
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/train", { method: "POST", body: formData })
+      const res = await fetch("http://127.0.0.1:8000/train", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      })
+
       clearInterval(progressInterval)
 
       if (!res.ok) {
@@ -92,15 +93,28 @@ export default function TrainPage() {
       setTrainingProgress(100)
       toast({ title: "Success", description: "Model trained successfully!" })
     } catch (error: any) {
-      toast({ variant: "destructive", title: "Training Failed", description: error.message })
-      setTrainingProgress(0)
+      clearInterval(progressInterval)
+      if (error.name !== "AbortError") {
+        toast({ variant: "destructive", title: "Training Failed", description: error.message })
+        setTrainingProgress(0)
+      }
     } finally {
       setIsTraining(false)
-      setTimeout(() => setTrainingProgress(0), 4000)
+      abortControllerRef.current = null
+      if (trainingProgress === 100) {
+        // Let success progress bar stay for a bit
+        setTimeout(() => setTrainingProgress(0), 4000)
+      }
     }
   }
 
-  if (!uploadResponse) return null
+  if (!uploadResponse) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-black">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white relative overflow-hidden">
@@ -115,7 +129,6 @@ export default function TrainPage() {
             backButtonHref="/upload"
             backButtonText="Back to Upload"
           />
-
           <div className="max-w-4xl mx-auto px-4 py-12">
             <div className="space-y-8">
               <PageNavigation
@@ -133,7 +146,6 @@ export default function TrainPage() {
                   description: "Generate model explanations",
                 }}
               />
-
               <Card className="glass-card backdrop-blur-md shadow-2xl border-white/20 hover:bg-black/70 transition-all duration-500">
                 <CardHeader>
                   <CardTitle className="flex items-center text-white text-shadow-lg">
@@ -151,7 +163,7 @@ export default function TrainPage() {
                       <Label htmlFor="model-type" className="text-white text-shadow-sm">
                         Model Type
                       </Label>
-                      <Select onValueChange={setSelectedModel}>
+                      <Select onValueChange={setSelectedModel} value={selectedModel}>
                         <SelectTrigger
                           id="model-type"
                           className="bg-black/60 border-white/30 text-white backdrop-blur-sm hover:bg-black/70 transition-all duration-300"
@@ -181,7 +193,7 @@ export default function TrainPage() {
                       <Label htmlFor="target-column" className="text-white text-shadow-sm">
                         Target Column
                       </Label>
-                      <Select onValueChange={setTargetColumn}>
+                      <Select onValueChange={setTargetColumn} value={targetColumn}>
                         <SelectTrigger
                           id="target-column"
                           className="bg-black/60 border-white/30 text-white backdrop-blur-sm hover:bg-black/70 transition-all duration-300"
@@ -198,7 +210,6 @@ export default function TrainPage() {
                       </Select>
                     </div>
                   </div>
-
                   <div className="space-y-4">
                     <Button
                       onClick={handleTrain}
@@ -214,7 +225,6 @@ export default function TrainPage() {
                         "Train Model"
                       )}
                     </Button>
-
                     {isTraining && (
                       <div className="space-y-3">
                         <Progress value={trainingProgress} className="w-full bg-black/60" />
@@ -227,23 +237,13 @@ export default function TrainPage() {
                             size="sm"
                             className="text-red-400 border-red-400/50 hover:bg-red-400/10 hover:text-red-300 bg-transparent"
                           >
-                            {isCancelling ? (
-                              <>
-                                <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                                Cancelling...
-                              </>
-                            ) : (
-                              <>
-                                <X className="mr-2 h-3 w-3" />
-                                Cancel Training
-                              </>
-                            )}
+                            <X className="mr-2 h-3 w-3" />
+                            Cancel Training
                           </Button>
                         </div>
                       </div>
                     )}
                   </div>
-
                   {trainingProgress === 100 && (
                     <div className="mt-6 p-4 bg-green-900/40 rounded-lg border border-green-500/40 backdrop-blur-sm">
                       <div className="flex items-center mb-2">

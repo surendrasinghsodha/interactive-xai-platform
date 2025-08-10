@@ -1,61 +1,46 @@
 export interface UploadResponse {
+  filename: string
   columns: string[]
   sample_data: Record<string, any>[]
 }
 
 export interface TrainResponse {
   model_id: string
-  message: string
-  columns: string[]
-  problem_type: "classification" | "regression"
+  problem_type: string
   target_column: string
-  numeric_columns: string[]
-  sample_data: Record<string, any>[]
-  model_performance: Record<string, any>
-}
-
-export interface ShapExplanation {
-  features: string[]
-  shap_values: number[]
-  base_value: number
-  explainer_type: string
-  reliability_score?: number
-}
-
-export interface LimeExplanation {
-  lime_explanation: Record<string, number>
-  reliability_score?: number
+  feature_columns: string[]
+  metrics: Record<string, any>
+  sample_data_with_predictions: Record<string, any>[]
 }
 
 export interface Explanation {
-  shap: ShapExplanation
-  lime: LimeExplanation
-  overall_reliability?: number
+  shap_values: any
+  lime_explanation: any
 }
 
 export interface AppContextType {
   file: File | null
   setFile: (file: File | null) => void
   isLoading: boolean
-  setIsLoading: (isLoading: boolean) => void
+  setIsLoading: (loading: boolean) => void
   isTraining: boolean
-  setIsTraining: (isTraining: boolean) => void
+  setIsTraining: (training: boolean) => void
   trainingProgress: number
-  setTrainingProgress: (trainingProgress: number) => void
+  setTrainingProgress: (progress: number) => void
   uploadResponse: UploadResponse | null
-  setUploadResponse: (uploadResponse: UploadResponse | null) => void
+  setUploadResponse: (response: UploadResponse | null) => void
   trainResponse: TrainResponse | null
-  setTrainResponse: (trainResponse: TrainResponse | null) => void
+  setTrainResponse: (response: TrainResponse | null) => void
   explanation: Explanation | null
   setExplanation: (explanation: Explanation | null) => void
   selectedModel: string | null
-  setSelectedModel: (selectedModel: string | null) => void
+  setSelectedModel: (model: string | null) => void
   targetColumn: string | null
-  setTargetColumn: (targetColumn: string | null) => void
+  setTargetColumn: (column: string | null) => void
   featureColumns: string[]
-  setFeatureColumns: (featureColumns: string[]) => void
+  setFeatureColumns: (columns: string[]) => void
   problemType: "classification" | "regression"
-  setProblemType: (problemType: "classification" | "regression") => void
+  setProblemType: (type: "classification" | "regression") => void
   selectedRow: Record<string, any> | null
-  setSelectedRow: (selectedRow: Record<string, any> | null) => void
+  setSelectedRow: (row: Record<string, any> | null) => void
 }
